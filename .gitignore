@@ -1,0 +1,5 @@
+# Build-artefacten
+/dist/
+/bin/
+*.deb
+*.rpm

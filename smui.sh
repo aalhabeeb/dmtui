@@ -22,7 +22,8 @@ set -euo pipefail
 # ---------------------------------------------------------------------------
 # Constantes / globale variabelen
 # ---------------------------------------------------------------------------
-APP_TITLE="SMUI - Storage Management UI"
+SMUI_VERSION="1.0.0"
+APP_TITLE="SMUI - Storage Management UI v${SMUI_VERSION}"
 PKG_MGR=""          # dnf | yum | apt-get
 DISTRO_ID=""        # rhel | ubuntu | debian | ...
 ROOT_DISK=""        # disk die de root-mount bevat (beschermd)
@@ -580,7 +581,34 @@ main_menu() {
 # ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
+usage() {
+    cat <<EOF
+SMUI - Storage Management UI v${SMUI_VERSION}
+
+Een nmtui-achtige TUI voor opslagbeheer (partities, LVM, filesystems) op
+RHEL/Rocky/Alma en Ubuntu/Debian.
+
+Gebruik:
+  smui [optie]
+
+Opties:
+  (geen)          Start de interactieve TUI (vereist root).
+  -h, --help      Toon deze hulp.
+  -v, --version   Toon de versie.
+
+Voorbeeld:
+  sudo smui
+EOF
+}
+
 main() {
+    case "${1:-}" in
+        -h|--help)    usage; exit 0 ;;
+        -v|--version) echo "smui ${SMUI_VERSION}"; exit 0 ;;
+        "" )          ;;
+        * )           echo "Onbekende optie: $1" >&2; usage; exit 2 ;;
+    esac
+
     require_root
     detect_distro
     ensure_deps

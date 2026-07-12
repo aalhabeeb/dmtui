@@ -59,6 +59,45 @@ Of in één keer draaien vanuit de checkout:
 sudo bash smui.sh
 ```
 
+## Installeren als pakket (.deb / .rpm)
+
+SMUI kan als los pakket geïnstalleerd worden. De packages worden gebouwd met
+[nfpm](https://nfpm.goreleaser.com) — één config levert zowel `.deb` als `.rpm`.
+
+Bouwen (op een Linux-host):
+
+```bash
+./packaging/build.sh          # bouwt beide in ./dist
+./packaging/build.sh deb      # alleen .deb
+./packaging/build.sh rpm      # alleen .rpm
+```
+
+Staat `nfpm` niet in `PATH`, dan downloadt het script automatisch een gepinde
+versie naar `./bin`. Resultaat in `./dist/`:
+
+```text
+dist/smui_1.0.0_all.deb
+dist/smui-1.0.0-1.noarch.rpm
+```
+
+Installeren:
+
+```bash
+# Debian/Ubuntu
+sudo apt install ./dist/smui_1.0.0_all.deb
+
+# RHEL/Rocky/Alma
+sudo dnf install ./dist/smui-1.0.0-1.noarch.rpm
+```
+
+Het pakket installeert `smui` naar `/usr/bin/smui`, een manpage naar
+`man 1 smui`, en declareert de runtime-afhankelijkheden (`lvm2`, `parted`,
+`util-linux`, en `whiptail`/`newt`). Daarna starten met:
+
+```bash
+sudo smui
+```
+
 ## Typische workflow — nieuwe extra disk toevoegen
 
 1. **Layout tonen** → controleer de naam van de nieuwe disk (bijv. `/dev/sdb`).
