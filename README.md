@@ -98,6 +98,35 @@ Het pakket installeert `smui` naar `/usr/bin/smui`, een manpage naar
 sudo smui
 ```
 
+## Releases (CI/CD)
+
+De workflow [.github/workflows/release.yml](.github/workflows/release.yml) bouwt
+de packages automatisch met GitHub Actions:
+
+- **Push naar `main` / pull request** → lint (`shellcheck`) + testbuild.
+- **Push van een tag `v*`** → build **en** publiceert een GitHub Release met de
+  `.deb` en `.rpm` als bijlagen. De tag moet overeenkomen met `SMUI_VERSION` in
+  `smui.sh` (anders faalt de build bewust).
+- **Handmatige run** (workflow_dispatch) → build + upload als artefact.
+
+Een release maken:
+
+```bash
+# 1. Bump de versie in smui.sh (SMUI_VERSION="x.y.z")
+# 2. Commit en tag
+git commit -am "release: v1.0.0"
+git tag v1.0.0
+git push origin main --tags
+```
+
+De Release verschijnt daarna onder **Releases** met de packages als download.
+
+## Licentie & wijzigingen
+
+- Licentie: [MIT](LICENSE)
+- Wijzigingen per versie: [CHANGELOG.md](CHANGELOG.md)
+
+
 ## Typische workflow — nieuwe extra disk toevoegen
 
 1. **Layout tonen** → controleer de naam van de nieuwe disk (bijv. `/dev/sdb`).

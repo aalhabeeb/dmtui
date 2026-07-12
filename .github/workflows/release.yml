@@ -1,0 +1,69 @@
+name: Build & Release
+
+# Bouwt .deb en .rpm packages met nfpm (via packaging/build.sh).
+#   * Push van een tag v* -> bouwt en publiceert een GitHub Release met de packages.
+#   * Handmatige run (workflow_dispatch) -> bouwt en uploadt de packages als artefact.
+#   * Pull request / push naar main -> alleen lint + build (geen release).
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  lint:
+    name: Lint (shellcheck)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Shellcheck
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y shellcheck
+          shellcheck smui.sh packaging/build.sh
+
+  build:
+    name: Build packages
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Versie-consistentie controleren (bij tag)
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          script_ver="$(grep -oP 'SMUI_VERSION="\K[^"]+' smui.sh | head -n1)"
+          tag_ver="${GITHUB_REF_NAME#v}"
+          echo "Script: ${script_ver} | Tag: ${tag_ver}"
+          if [[ "$script_ver" != "$tag_ver" ]]; then
+            echo "::error::Tag (${tag_ver}) komt niet overeen met SMUI_VERSION (${script_ver}) in smui.sh"
+            exit 1
+          fi
+
+      - name: Build .deb en .rpm
+        run: |
+          chmod +x packaging/build.sh
+          ./packaging/build.sh
+
+      - name: Artefacten uploaden
+        uses: actions/upload-artifact@v4
+        with:
+          name: smui-packages
+          path: dist/*
+          if-no-files-found: error
+
+      - name: GitHub Release publiceren
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/*.deb
+            dist/*.rpm
+          generate_release_notes: true
