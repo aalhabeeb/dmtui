@@ -22,7 +22,7 @@ set -euo pipefail
 # ---------------------------------------------------------------------------
 # Constantes / globale variabelen
 # ---------------------------------------------------------------------------
-SMUI_VERSION="1.1.1"
+SMUI_VERSION="1.1.2"
 APP_TITLE="SMUI - Storage Management UI v${SMUI_VERSION}"
 PKG_MGR=""          # dnf | yum | apt-get
 DISTRO_ID=""        # rhel | ubuntu | debian | ...
@@ -129,15 +129,28 @@ compute_dialog_size() {
     local lines cols
     lines=$(tput lines 2>/dev/null || echo 24)
     cols=$(tput cols 2>/dev/null || echo 80)
+    # Vang lege/ongeldige waarden af.
+    [[ "$lines" =~ ^[0-9]+$ ]] || lines=24
+    [[ "$cols" =~ ^[0-9]+$ ]] || cols=80
 
-    if (( lines > 24 )); then DLG_H=22; else DLG_H=$(( lines - 2 )); fi
+    # Boxhoogte: 1 regel marge t.o.v. de terminal, max 23, min 12.
+    DLG_H=$(( lines - 1 ))
+    if (( DLG_H > 23 )); then DLG_H=23; fi
     if (( DLG_H < 12 )); then DLG_H=12; fi
 
-    if (( cols > 84 )); then DLG_W=80; else DLG_W=$(( cols - 4 )); fi
-    if (( DLG_W < 60 )); then DLG_W=60; fi
+    # Boxbreedte: 2 kolommen marge, max 84, min 50.
+    DLG_W=$(( cols - 2 ))
+    if (( DLG_W > 84 )); then DLG_W=84; fi
+    if (( DLG_W < 50 )); then DLG_W=50; fi
 
-    LIST_H=$(( DLG_H - 8 ))
-    if (( LIST_H < 4 )); then LIST_H=4; fi
+    # Lijsthoogte ruim binnen de box houden: whiptail heeft ~12 regels nodig voor
+    # titel, prompttekst, knoppen en randen. Te grote lijst => whiptail faalt.
+    LIST_H=$(( DLG_H - 12 ))
+    if (( LIST_H < 3 )); then LIST_H=3; fi
+
+    if [[ "${SMUI_DEBUG:-0}" == "1" ]]; then
+        echo "SMUI_DEBUG: term=${lines}x${cols}  box=${DLG_H}x${DLG_W}  list=${LIST_H}" >&2
+    fi
 }
 
 msg_box() {
@@ -680,7 +693,7 @@ main_menu() {
     while true; do
         local choice
         choice=$(whiptail --title "$APP_TITLE" --menu \
-            "Distro: ${DISTRO_ID}   Systeemdisk (beschermd): ${ROOT_DISK:-onbekend}\n\nKies een actie (begin bij optie 1 als je een nieuwe disk hebt):" \
+            "Kies een actie (optie 1 = nieuwe disk in gebruik nemen):" \
             "$DLG_H" "$DLG_W" "$LIST_H" \
             "1" ">> Nieuwe disk in gebruik nemen (begeleide wizard)" \
             "2" "Layout tonen (disks, PV/VG/LV)" \

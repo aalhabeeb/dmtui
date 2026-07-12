@@ -7,6 +7,16 @@ en dit project volgt [Semantic Versioning](https://semver.org/lang/nl/).
 
 ## [Unreleased]
 
+## [1.1.2] - 2026-07-12
+
+### Opgelost
+- Menu bleef direct afsluiten met "SMUI afgesloten." doordat de menu-lijsthoogte
+  te groot was voor de dialoogbox (whiptail heeft ruimte nodig voor titel, tekst,
+  knoppen en randen). De lijsthoogte is nu conservatiever (`DLG_H - 12`) en de
+  hoofdmenu-prompt is ingekort tot één regel.
+- `SMUI_DEBUG=1 smui` toont nu de berekende terminal- en boxafmetingen (voor
+  diagnose).
+
 ## [1.1.1] - 2026-07-12
 
 ### Opgelost
@@ -58,7 +68,8 @@ en dit project volgt [Semantic Versioning](https://semver.org/lang/nl/).
 - GitHub Actions-workflow voor lint, build en release
   (`.github/workflows/release.yml`).
 
-[Unreleased]: https://github.com/aalhabeeb/SMUI/compare/v1.1.1...HEAD
+[Unreleased]: https://github.com/aalhabeeb/SMUI/compare/v1.1.2...HEAD
+[1.1.2]: https://github.com/aalhabeeb/SMUI/releases/tag/v1.1.2
 [1.1.1]: https://github.com/aalhabeeb/SMUI/releases/tag/v1.1.1
 [1.1.0]: https://github.com/aalhabeeb/SMUI/releases/tag/v1.1.0
 [1.0.1]: https://github.com/aalhabeeb/SMUI/releases/tag/v1.0.1
