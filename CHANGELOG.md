@@ -30,5 +30,5 @@ en dit project volgt [Semantic Versioning](https://semver.org/lang/nl/).
 - GitHub Actions-workflow voor lint, build en release
   (`.github/workflows/release.yml`).
 
-[Unreleased]: https://github.com/amjed/SMUI/compare/v1.0.0...HEAD
-[1.0.0]: https://github.com/amjed/SMUI/releases/tag/v1.0.0
+[Unreleased]: https://github.com/aalhabeeb/SMUI/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/aalhabeeb/SMUI/releases/tag/v1.0.0

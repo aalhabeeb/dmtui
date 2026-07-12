@@ -47,7 +47,7 @@ De volgende pakketten worden automatisch geïnstalleerd als ze ontbreken:
 ## Gebruik
 
 ```bash
-git clone <deze-repo> smui
+git clone https://github.com/aalhabeeb/SMUI.git smui
 cd smui
 chmod +x smui.sh
 sudo ./smui.sh
