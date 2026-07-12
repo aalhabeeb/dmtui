@@ -104,9 +104,9 @@ De workflow [.github/workflows/release.yml](.github/workflows/release.yml) bouwt
 de packages automatisch met GitHub Actions:
 
 - **Push naar `main` / pull request** → lint (`shellcheck`) + testbuild.
-- **Push van een tag `v*`** → build **en** publiceert een GitHub Release met de
-  `.deb` en `.rpm` als bijlagen. De tag moet overeenkomen met `SMUI_VERSION` in
-  `smui.sh` (anders faalt de build bewust).
+- **Push van een tag `v*`** → build **en** publiceert een Release met de
+  `.deb` en `.rpm` in de **publieke releases-repo** (broncode blijft privé).
+  De tag moet overeenkomen met `SMUI_VERSION` in `smui.sh` (anders faalt de build).
 - **Handmatige run** (workflow_dispatch) → build + upload als artefact.
 
 Een release maken:
@@ -119,7 +119,31 @@ git tag v1.0.0
 git push origin main --tags
 ```
 
-De Release verschijnt daarna onder **Releases** met de packages als download.
+### Publieke packages, privé broncode
+
+De workflow publiceert de packages naar een aparte **publieke** repo
+(`aalhabeeb/SMUI-releases`), terwijl deze broncode-repo **privé** blijft. Zo kan
+iedereen de `.deb`/`.rpm` downloaden zonder de code te zien.
+
+Eenmalige setup:
+
+1. Maak een **publieke** repo aan: `aalhabeeb/SMUI-releases` (leeg is prima).
+2. Maak een **Personal Access Token** met schrijfrechten op die repo:
+   - *Fine-grained token* → repository `SMUI-releases` → permission
+     **Contents: Read and write**.
+3. Voeg het token toe als **secret** in de privé-repo `SMUI`:
+   - Settings → Secrets and variables → Actions → New repository secret →
+     naam **`RELEASES_TOKEN`**.
+
+Wil je een andere doel-repo? Pas `repository:` in
+[.github/workflows/release.yml](.github/workflows/release.yml) aan.
+
+Downloaden (openbaar, geen auth nodig):
+
+```bash
+# Nieuwste release-assets
+https://github.com/aalhabeeb/SMUI-releases/releases/latest
+```
 
 ## Licentie & wijzigingen
 
