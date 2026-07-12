@@ -22,7 +22,7 @@ set -euo pipefail
 # ---------------------------------------------------------------------------
 # Constantes / globale variabelen
 # ---------------------------------------------------------------------------
-SMUI_VERSION="1.1.2"
+SMUI_VERSION="1.1.3"
 APP_TITLE="SMUI - Storage Management UI v${SMUI_VERSION}"
 PKG_MGR=""          # dnf | yum | apt-get
 DISTRO_ID=""        # rhel | ubuntu | debian | ...
@@ -692,12 +692,12 @@ Wil je dit uitvoeren?" "$DLG_H" "$DLG_W"; then
 main_menu() {
     while true; do
         local choice
-        choice=$(whiptail --title "$APP_TITLE" --menu \
+        if ! choice=$(whiptail --title "$APP_TITLE" --menu \
             "Distro: ${DISTRO_ID} | Kies een actie (optie 1 = nieuwe disk):" \
             "$DLG_H" "$DLG_W" "$LIST_H" \
-            "1" ">> Nieuwe disk in gebruik nemen (begeleide wizard)" \
+            "1" "Nieuwe disk in gebruik nemen (WIZARD, aanbevolen)" \
             "2" "Layout tonen (disks, PV/VG/LV)" \
-            "3" "--- Geavanceerd: Partitie aanmaken (type 8e / LVM)" \
+            "3" "Geavanceerd: Partitie aanmaken (type 8e / LVM)" \
             "4" "Geavanceerd: Physical Volume aanmaken (pvcreate)" \
             "5" "Geavanceerd: Volume Group aanmaken (vgcreate)" \
             "6" "Geavanceerd: Logical Volume aanmaken (lvcreate)" \
@@ -706,7 +706,16 @@ main_menu() {
             "9" "Geavanceerd: Formatteren + mounten (mkfs + fstab)" \
             "0" "Verwijderen (LV / VG / PV)" \
             "q" "Afsluiten" \
-            3>&1 1>&2 2>&3) || break
+            3>&1 1>&2 2>&3); then
+            # Niet-nul: gebruiker koos Annuleren/Esc, OF whiptail gaf een fout.
+            # Bij een fout staat de melding in $choice (via de fd-swap opgevangen).
+            if [[ -n "$choice" ]]; then
+                clear
+                echo "SMUI: het menu kon niet worden getoond." >&2
+                echo "whiptail-melding: $choice" >&2
+            fi
+            break
+        fi
 
         case "$choice" in
             1) action_new_disk_wizard ;;

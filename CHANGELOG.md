@@ -7,6 +7,16 @@ en dit project volgt [Semantic Versioning](https://semver.org/lang/nl/).
 
 ## [Unreleased]
 
+## [1.1.3] - 2026-07-12
+
+### Opgelost
+- **Echte oorzaak** dat het menu direct afsloot: een menu-item begon met `---`,
+  waardoor whiptail dat als een optie las en het hele menu faalde (de fout was
+  onzichtbaar door de fd-omleiding). Alle leidende streepjes/decoraties uit de
+  menu-items verwijderd.
+- Het menu toont nu een duidelijke melding als whiptail toch faalt, in plaats van
+  stil af te sluiten.
+
 ## [1.1.2] - 2026-07-12
 
 ### Opgelost
@@ -68,7 +78,8 @@ en dit project volgt [Semantic Versioning](https://semver.org/lang/nl/).
 - GitHub Actions-workflow voor lint, build en release
   (`.github/workflows/release.yml`).
 
-[Unreleased]: https://github.com/aalhabeeb/SMUI/compare/v1.1.2...HEAD
+[Unreleased]: https://github.com/aalhabeeb/SMUI/compare/v1.1.3...HEAD
+[1.1.3]: https://github.com/aalhabeeb/SMUI/releases/tag/v1.1.3
 [1.1.2]: https://github.com/aalhabeeb/SMUI/releases/tag/v1.1.2
 [1.1.1]: https://github.com/aalhabeeb/SMUI/releases/tag/v1.1.1
 [1.1.0]: https://github.com/aalhabeeb/SMUI/releases/tag/v1.1.0
