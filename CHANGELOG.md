@@ -7,6 +7,16 @@ en dit project volgt [Semantic Versioning](https://semver.org/lang/nl/).
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-07-12
+
+### Toegevoegd
+- **Kleurthema** voor `dialog` (via een gegenereerd `DIALOGRC`): frissere,
+  consistente kleuren met een blauw/witte look.
+- **Optionele `fzf`-integratie** voor de disk-/VG-/LV-/PV-lijsten: **typen om te
+  filteren**, muis-klik en scrollen. Ontbreekt `fzf`, dan valt SMUI automatisch
+  terug op het `dialog`-menu. Uit te schakelen met `SMUI_NO_FZF=1`.
+- `.deb` adviseert `fzf` (Recommends); optioneel op RHEL via EPEL.
+
 ## [1.3.0] - 2026-07-12
 
 ### Gewijzigd
@@ -97,7 +107,8 @@ en dit project volgt [Semantic Versioning](https://semver.org/lang/nl/).
 - GitHub Actions-workflow voor lint, build en release
   (`.github/workflows/release.yml`).
 
-[Unreleased]: https://github.com/aalhabeeb/SMUI/compare/v1.3.0...HEAD
+[Unreleased]: https://github.com/aalhabeeb/SMUI/compare/v1.4.0...HEAD
+[1.4.0]: https://github.com/aalhabeeb/SMUI/releases/tag/v1.4.0
 [1.3.0]: https://github.com/aalhabeeb/SMUI/releases/tag/v1.3.0
 [1.2.0]: https://github.com/aalhabeeb/SMUI/releases/tag/v1.2.0
 [1.1.3]: https://github.com/aalhabeeb/SMUI/releases/tag/v1.1.3

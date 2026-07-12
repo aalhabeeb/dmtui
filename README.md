@@ -45,6 +45,20 @@ De volgende pakketten worden automatisch geïnstalleerd als ze ontbreken:
 | `parted`   | `parted`      | `parted`             |
 | `lsblk`/`blkid` | `util-linux` | `util-linux`    |
 
+### Optioneel: `fzf` (aanrader)
+
+Als **`fzf`** geïnstalleerd is, gebruikt SMUI dat voor de disk-/VG-/LV-lijsten:
+**typen om te filteren**, muis-klik en scrollen. Ontbreekt `fzf`, dan valt SMUI
+automatisch terug op het gewone `dialog`-menu.
+
+```bash
+sudo apt install fzf        # Debian/Ubuntu
+sudo dnf install fzf        # RHEL/Rocky/Alma (via EPEL)
+```
+
+Het `.deb`-pakket adviseert `fzf` automatisch (Recommends). Wil je `fzf` tijdelijk
+uitschakelen: start met `SMUI_NO_FZF=1 sudo smui`.
+
 ## Gebruik
 
 ```bash

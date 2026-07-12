@@ -22,13 +22,14 @@ set -euo pipefail
 # ---------------------------------------------------------------------------
 # Constantes / globale variabelen
 # ---------------------------------------------------------------------------
-SMUI_VERSION="1.3.0"
+SMUI_VERSION="1.4.0"
 APP_TITLE="SMUI - Storage Management UI v${SMUI_VERSION}"
 # Vaste kopbalk boven elk venster (moderne look).
 BACKTITLE="SMUI - Storage Management UI v${SMUI_VERSION}   |   muis + pijltjestoetsen"
 PKG_MGR=""          # dnf | yum | apt-get
 DISTRO_ID=""        # rhel | ubuntu | debian | ...
 ROOT_DISK=""        # disk die de root-mount bevat (beschermd)
+DIALOGRC_TMP=""     # tijdelijk themabestand voor dialog (kleurthema)
 
 # Dialooggroottes (worden aangepast aan de terminal in compute_dialog_size).
 DLG_H=20            # hoogte voor vensters/menu's
@@ -177,6 +178,83 @@ input_box() {
     printf '%s' "$result"
 }
 
+# Schrijft een modern kleurthema voor dialog naar een tijdelijk bestand en zet
+# DIALOGRC erop. Wordt bij afsluiten opgeruimd (trap).
+setup_dialog_theme() {
+    DIALOGRC_TMP="$(mktemp 2>/dev/null)" || { DIALOGRC_TMP=""; return 0; }
+    cat >"$DIALOGRC_TMP" <<'RC'
+use_shadow = ON
+use_colors = ON
+screen_color = (CYAN,BLUE,ON)
+shadow_color = (BLACK,BLACK,ON)
+dialog_color = (BLACK,WHITE,OFF)
+title_color = (WHITE,BLUE,ON)
+border_color = (WHITE,WHITE,ON)
+border2_color = (WHITE,WHITE,ON)
+button_active_color = (WHITE,BLUE,ON)
+button_inactive_color = (BLACK,WHITE,OFF)
+button_key_active_color = (WHITE,BLUE,ON)
+button_key_inactive_color = (RED,WHITE,OFF)
+button_label_active_color = (YELLOW,BLUE,ON)
+button_label_inactive_color = (BLACK,WHITE,ON)
+inputbox_color = (BLACK,WHITE,OFF)
+inputbox_border_color = (WHITE,WHITE,ON)
+searchbox_color = (BLACK,WHITE,OFF)
+searchbox_title_color = (WHITE,BLUE,ON)
+searchbox_border_color = (WHITE,WHITE,ON)
+position_indicator_color = (BLUE,WHITE,ON)
+menubox_color = (BLACK,WHITE,OFF)
+menubox_border_color = (WHITE,WHITE,ON)
+menubox_border2_color = (WHITE,WHITE,ON)
+item_color = (BLACK,WHITE,OFF)
+item_selected_color = (WHITE,BLUE,ON)
+tag_color = (BLUE,WHITE,ON)
+tag_selected_color = (YELLOW,BLUE,ON)
+tag_key_color = (RED,WHITE,OFF)
+tag_key_selected_color = (YELLOW,BLUE,ON)
+check_color = (BLACK,WHITE,OFF)
+check_selected_color = (WHITE,BLUE,ON)
+uarrow_color = (GREEN,WHITE,ON)
+darrow_color = (GREEN,WHITE,ON)
+RC
+    export DIALOGRC="$DIALOGRC_TMP"
+    trap 'rm -f "${DIALOGRC_TMP:-}"' EXIT
+}
+
+# Is fzf beschikbaar? (optioneel; geeft typen-om-te-filteren + muis in lijsten)
+have_fzf() {
+    [[ "${SMUI_NO_FZF:-0}" != "1" ]] && command -v fzf >/dev/null 2>&1
+}
+
+# Toont een keuzelijst en geeft de gekozen 'tag' terug.
+# Met fzf: modern, typen om te filteren + muis. Zonder fzf: dialog-menu.
+# $1 = kop/omschrijving, daarna paren: tag omschrijving tag omschrijving ...
+render_menu() {
+    local header="$1"; shift
+    local -a pairs=("$@")
+
+    if have_fzf; then
+        local i
+        local -a lines=()
+        for (( i=0; i<${#pairs[@]}; i+=2 )); do
+            lines+=("${pairs[i]}"$'\t'"${pairs[i+1]}")
+        done
+        local sel
+        sel=$(printf '%s\n' "${lines[@]}" | fzf \
+            --height=100% --layout=reverse --border=rounded --info=inline \
+            --pointer='>' --prompt='Zoek: ' \
+            --header="${header}  (typ om te filteren - muis/pijltjes - Enter = kies)" \
+            --delimiter=$'\t' --tabstop=4 \
+            --color='hl:cyan,fg+:white,bg+:blue,hl+:brightcyan,prompt:cyan,header:brightcyan,border:blue,pointer:brightcyan,info:gray') || return 1
+        [[ -z "$sel" ]] && return 1
+        printf '%s' "${sel%%$'\t'*}"
+    else
+        dialog --backtitle "$BACKTITLE" --colors --title "$APP_TITLE" \
+            --ok-label "Kies" --cancel-label "Annuleren" \
+            --menu "$header" "$DLG_H" "$DLG_W" "$LIST_H" "${pairs[@]}" 3>&1 1>&2 2>&3
+    fi
+}
+
 # ---------------------------------------------------------------------------
 # Commando-uitvoering met preview
 # ---------------------------------------------------------------------------
@@ -262,9 +340,7 @@ select_disk() {
 
     [[ ${#items[@]} -eq 0 ]] && { msg_box "Geen disks gevonden."; return 1; }
 
-    dialog --backtitle "$BACKTITLE" --colors --title "$APP_TITLE" \
-        --ok-label "Kies" --cancel-label "Annuleren" \
-        --menu "$prompt" "$DLG_H" "$DLG_W" "$LIST_H" "${items[@]}" 3>&1 1>&2 2>&3
+    render_menu "$prompt" "${items[@]}"
 }
 
 # Toont een menu met blok-partities/disks die als PV bruikbaar zijn.
@@ -286,9 +362,7 @@ select_block() {
 
     [[ ${#items[@]} -eq 0 ]] && { msg_box "Geen blok-apparaten gevonden."; return 1; }
 
-    dialog --backtitle "$BACKTITLE" --colors --title "$APP_TITLE" \
-        --ok-label "Kies" --cancel-label "Annuleren" \
-        --menu "$prompt" "$DLG_H" "$DLG_W" "$LIST_H" "${items[@]}" 3>&1 1>&2 2>&3
+    render_menu "$prompt" "${items[@]}"
 }
 
 # Menu met bestaande Volume Groups.
@@ -302,9 +376,7 @@ select_vg() {
     done < <(vgs --noheadings -o vg_name,vg_size,vg_free 2>/dev/null | awk '{print $1, $2, $3}')
 
     [[ ${#items[@]} -eq 0 ]] && { msg_box "Geen Volume Groups gevonden."; return 1; }
-    dialog --backtitle "$BACKTITLE" --colors --title "$APP_TITLE" \
-        --ok-label "Kies" --cancel-label "Annuleren" \
-        --menu "$prompt" "$DLG_H" "$DLG_W" "$LIST_H" "${items[@]}" 3>&1 1>&2 2>&3
+    render_menu "$prompt" "${items[@]}"
 }
 
 # Menu met bestaande Logical Volumes (geeft VG/LV-pad /dev/vg/lv terug).
@@ -318,9 +390,7 @@ select_lv() {
     done < <(lvs --noheadings -o lv_name,vg_name,lv_size 2>/dev/null | awk '{print $1, $2, $3}')
 
     [[ ${#items[@]} -eq 0 ]] && { msg_box "Geen Logical Volumes gevonden."; return 1; }
-    dialog --backtitle "$BACKTITLE" --colors --title "$APP_TITLE" \
-        --ok-label "Kies" --cancel-label "Annuleren" \
-        --menu "$prompt" "$DLG_H" "$DLG_W" "$LIST_H" "${items[@]}" 3>&1 1>&2 2>&3
+    render_menu "$prompt" "${items[@]}"
 }
 
 # Menu met bestaande Physical Volumes.
@@ -334,9 +404,7 @@ select_pv() {
     done < <(pvs --noheadings -o pv_name,vg_name,pv_size 2>/dev/null | awk '{print $1, $2, $3}')
 
     [[ ${#items[@]} -eq 0 ]] && { msg_box "Geen Physical Volumes gevonden."; return 1; }
-    dialog --backtitle "$BACKTITLE" --colors --title "$APP_TITLE" \
-        --ok-label "Kies" --cancel-label "Annuleren" \
-        --menu "$prompt" "$DLG_H" "$DLG_W" "$LIST_H" "${items[@]}" 3>&1 1>&2 2>&3
+    render_menu "$prompt" "${items[@]}"
 }
 
 # Veiligheidscheck: weiger bewerkingen op de systeemdisk.
@@ -868,6 +936,7 @@ main() {
     require_root
     detect_distro
     ensure_deps
+    setup_dialog_theme
     compute_dialog_size
     detect_root_disk
     main_menu

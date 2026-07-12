@@ -41,6 +41,8 @@ contents:
       mode: 0644
 
 # Runtime-afhankelijkheden. 'dialog' heet op alle distro's gewoon 'dialog'.
+# 'fzf' is optioneel (typen-om-te-filteren + muis in lijsten); als het ontbreekt
+# valt SMUI automatisch terug op het dialog-menu.
 overrides:
   deb:
     depends:
@@ -48,6 +50,8 @@ overrides:
       - parted
       - util-linux
       - dialog
+    recommends:
+      - fzf
   rpm:
     depends:
       - lvm2
