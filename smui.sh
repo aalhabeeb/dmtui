@@ -22,7 +22,7 @@ set -euo pipefail
 # ---------------------------------------------------------------------------
 # Constantes / globale variabelen
 # ---------------------------------------------------------------------------
-SMUI_VERSION="1.4.1"
+SMUI_VERSION="1.4.2"
 APP_TITLE="SMUI - Storage Management UI v${SMUI_VERSION}"
 # Vaste kopbalk boven elk venster (moderne look).
 BACKTITLE="SMUI - Storage Management UI v${SMUI_VERSION}   |   muis + pijltjestoetsen"
@@ -247,7 +247,8 @@ have_fzf() {
 }
 
 # Toont een keuzelijst en geeft de gekozen 'tag' terug.
-# Met fzf: modern, typen om te filteren + muis. Zonder fzf: dialog-menu.
+# Met fzf: modern, typen om te filteren + muis. Zonder fzf (of bij een fzf-fout):
+# val automatisch terug op het dialog-menu.
 # $1 = kop/omschrijving, daarna paren: tag omschrijving tag omschrijving ...
 render_menu() {
     local header="$1"; shift
@@ -259,20 +260,23 @@ render_menu() {
         for (( i=0; i<${#pairs[@]}; i+=2 )); do
             lines+=("${pairs[i]}"$'\t'"${pairs[i+1]}")
         done
-        local sel
+        # Alleen breed-ondersteunde fzf-opties (compatibel met oudere versies).
+        local sel rc=0
         sel=$(printf '%s\n' "${lines[@]}" | fzf \
-            --height=100% --layout=reverse --border=rounded --info=inline \
-            --pointer='>' --prompt='Zoek: ' \
-            --header="${header}  (typ om te filteren - muis/pijltjes - Enter = kies)" \
-            --delimiter=$'\t' --tabstop=4 \
-            --color='hl:cyan,fg+:white,bg+:blue,hl+:brightcyan,prompt:cyan,header:brightcyan,border:blue,pointer:brightcyan,info:gray') || return 1
-        [[ -z "$sel" ]] && return 1
-        printf '%s' "${sel%%$'\t'*}"
-    else
-        dialog --backtitle "$BACKTITLE" --colors --title "$APP_TITLE" \
-            --ok-label "Kies" --cancel-label "Annuleren" \
-            --menu "$header" "$DLG_H" "$DLG_W" "$LIST_H" "${pairs[@]}" 3>&1 1>&2 2>&3
+            --reverse --prompt='Zoek: ' \
+            --header="${header}  (typ=filter, muis/pijltjes, Enter=kies, Esc=terug)") || rc=$?
+        if (( rc == 0 )) && [[ -n "$sel" ]]; then
+            printf '%s' "${sel%%$'\t'*}"
+            return 0
+        elif (( rc == 130 )); then
+            return 1   # gebruiker annuleerde met Esc
+        fi
+        # rc anders (fzf-optie-/omgevingsfout): val terug op het dialog-menu.
     fi
+
+    dialog --backtitle "$BACKTITLE" --colors --title "$APP_TITLE" \
+        --ok-label "Kies" --cancel-label "Annuleren" \
+        --menu "$header" "$DLG_H" "$DLG_W" "$LIST_H" "${pairs[@]}" 3>&1 1>&2 2>&3
 }
 
 # ---------------------------------------------------------------------------

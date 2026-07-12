@@ -7,6 +7,15 @@ en dit project volgt [Semantic Versioning](https://semver.org/lang/nl/).
 
 ## [Unreleased]
 
+## [1.4.2] - 2026-07-12
+
+### Opgelost
+- De wizard viel na het intro-scherm terug naar het hoofdmenu wanneer `fzf`
+  geïnstalleerd was: SMUI gebruikte `fzf`-opties (`--border=rounded`, `--info=inline`,
+  uitgebreide `--color`) die oudere `fzf`-versies niet kennen, waardoor `fzf` direct
+  met een fout stopte. Nu worden alleen breed-ondersteunde opties gebruikt, én valt
+  SMUI automatisch terug op het `dialog`-menu als `fzf` toch een fout geeft.
+
 ## [1.4.1] - 2026-07-12
 
 ### Gewijzigd
@@ -116,7 +125,8 @@ en dit project volgt [Semantic Versioning](https://semver.org/lang/nl/).
 - GitHub Actions-workflow voor lint, build en release
   (`.github/workflows/release.yml`).
 
-[Unreleased]: https://github.com/aalhabeeb/SMUI/compare/v1.4.1...HEAD
+[Unreleased]: https://github.com/aalhabeeb/SMUI/compare/v1.4.2...HEAD
+[1.4.2]: https://github.com/aalhabeeb/SMUI/releases/tag/v1.4.2
 [1.4.1]: https://github.com/aalhabeeb/SMUI/releases/tag/v1.4.1
 [1.4.0]: https://github.com/aalhabeeb/SMUI/releases/tag/v1.4.0
 [1.3.0]: https://github.com/aalhabeeb/SMUI/releases/tag/v1.3.0
