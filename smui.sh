@@ -22,7 +22,7 @@ set -euo pipefail
 # ---------------------------------------------------------------------------
 # Constantes / globale variabelen
 # ---------------------------------------------------------------------------
-SMUI_VERSION="1.4.4"
+SMUI_VERSION="1.5.0"
 APP_TITLE="SMUI - Storage Management UI v${SMUI_VERSION}"
 # Vaste kopbalk boven elk venster (moderne look).
 BACKTITLE="SMUI - Storage Management UI v${SMUI_VERSION}   |   muis + pijltjestoetsen"
@@ -462,12 +462,10 @@ action_create_partition() {
     guard_system_disk "$disk" || return 0
 
     local label
-    label=$(dialog --backtitle "$BACKTITLE" --colors --title "$APP_TITLE" --menu \
-        "Partitietabel voor ${disk}.\nLet op: 'nieuw label' WIST alle bestaande partities!" 18 78 4 \
+    label=$(render_menu "Partitietabel voor ${disk} (nieuw label WIST de hele disk)" \
         "keep" "Bestaande tabel behouden, alleen partitie toevoegen" \
         "gpt"  "Nieuw GPT-label (wist disk) - aanbevolen" \
-        "msdos" "Nieuw MBR/msdos-label (wist disk)" \
-        3>&1 1>&2 2>&3) || return 0
+        "msdos" "Nieuw MBR/msdos-label (wist disk)") || return 0
 
     local size
     size=$(input_box "Grootte van de partitie (bijv. 100%, 50GB, 500MB).\nStandaard vult de resterende ruimte:" "100%") || return 0
@@ -608,11 +606,10 @@ action_format_mount() {
     guard_system_disk "$dev" || return 0
 
     local fstype
-    fstype=$(dialog --backtitle "$BACKTITLE" --colors --title "$APP_TITLE" --menu "Kies het filesystem voor ${dev}:" 16 70 4 \
+    fstype=$(render_menu "Kies het filesystem voor ${dev}:" \
         "ext4" "Algemeen, breed ondersteund" \
         "xfs"  "Standaard op RHEL, goed voor grote volumes" \
-        "btrfs" "Snapshots/subvolumes" \
-        3>&1 1>&2 2>&3) || return 0
+        "btrfs" "Snapshots/subvolumes") || return 0
 
     local mountpoint
     mountpoint=$(input_box "Mountpoint (map) voor ${dev}:" "/mnt/data") || return 0
@@ -662,12 +659,11 @@ action_show_layout() {
 # ---------------------------------------------------------------------------
 action_remove_menu() {
     local choice
-    choice=$(dialog --backtitle "$BACKTITLE" --colors --title "$APP_TITLE" --menu "Wat wil je verwijderen?" 16 70 4 \
+    choice=$(render_menu "Wat wil je verwijderen?" \
         "lv" "Logical Volume verwijderen" \
         "vg" "Volume Group verwijderen" \
         "pv" "Physical Volume-signatuur verwijderen" \
-        "back" "Terug" \
-        3>&1 1>&2 2>&3) || return 0
+        "back" "Terug") || return 0
 
     case "$choice" in
         lv) remove_lv ;;
@@ -820,22 +816,18 @@ action_new_disk_wizard() {
 
     # Kies wat er met de disk moet gebeuren.
     local mode
-    mode=$(dialog --backtitle "$BACKTITLE" --colors --title "$APP_TITLE" --ok-label "Kies" --cancel-label "Annuleren" --menu \
-        "Wat wil je met ${disk} doen?" "$DLG_H" "$DLG_W" 2 \
+    mode=$(render_menu "Wat wil je met ${disk} doen?" \
         "nieuw" "Nieuwe opslag aanmaken (nieuwe VG + LV + mount)" \
-        "uitbreiden" "Toevoegen aan bestaande Volume Group (type 8e)" \
-        3>&1 1>&2 2>&3) || return 0
+        "uitbreiden" "Toevoegen aan bestaande Volume Group (type 8e)") || return 0
     if [[ "$mode" == "uitbreiden" ]]; then
         wizard_extend_existing "$disk"
         return 0
     fi
 
     local fstype
-    fstype=$(dialog --backtitle "$BACKTITLE" --colors --title "$APP_TITLE" --ok-label "Kies" --cancel-label "Annuleren" --menu \
-        "Welk filesystem wil je op ${disk}?" 15 72 3 \
+    fstype=$(render_menu "Welk filesystem wil je op ${disk}?" \
         "ext4" "Algemeen, breed ondersteund (aanbevolen)" \
-        "xfs"  "Standaard op RHEL, sterk bij grote volumes" \
-        3>&1 1>&2 2>&3) || return 0
+        "xfs"  "Standaard op RHEL, sterk bij grote volumes") || return 0
 
     local mountpoint
     mountpoint=$(input_box "Waar wil je de opslag koppelen (mountpoint)?\nDeze map wordt aangemaakt en blijft na reboot gemount." "/mnt/data") || return 0
@@ -893,9 +885,7 @@ Wil je dit uitvoeren?" "$DLG_H" "$DLG_W"; then
 main_menu() {
     while true; do
         local choice
-        if ! choice=$(dialog --backtitle "$BACKTITLE" --colors --title "$APP_TITLE" --ok-label "Kies" --cancel-label "Afsluiten" --menu \
-            "Distro: ${DISTRO_ID} | Kies een actie (optie 1 = nieuwe disk):" \
-            "$DLG_H" "$DLG_W" "$LIST_H" \
+        choice=$(render_menu "Distro: ${DISTRO_ID} | Kies een actie (optie 1 = nieuwe disk)" \
             "1" "Nieuwe disk in gebruik nemen (WIZARD, aanbevolen)" \
             "2" "Layout tonen (disks, PV/VG/LV)" \
             "3" "Geavanceerd: Partitie aanmaken (type 8e / LVM)" \
@@ -906,17 +896,7 @@ main_menu() {
             "8" "Geavanceerd: Logical Volume uitbreiden (lvextend)" \
             "9" "Geavanceerd: Formatteren + mounten (mkfs + fstab)" \
             "0" "Verwijderen (LV / VG / PV)" \
-            "q" "Afsluiten" \
-            3>&1 1>&2 2>&3); then
-            # Niet-nul: gebruiker koos Annuleren/Esc, OF dialog gaf een fout.
-            # Bij een fout staat de melding in $choice (via de fd-swap opgevangen).
-            if [[ -n "$choice" ]]; then
-                clear
-                echo "SMUI: het menu kon niet worden getoond." >&2
-                echo "dialog-melding: $choice" >&2
-            fi
-            break
-        fi
+            "q" "Afsluiten") || break
 
         case "$choice" in
             1) action_new_disk_wizard ;;

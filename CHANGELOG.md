@@ -7,6 +7,15 @@ en dit project volgt [Semantic Versioning](https://semver.org/lang/nl/).
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-07-12
+
+### Gewijzigd
+- **Alle menu's** (hoofdmenu, wizard-keuzes, filesystem, verwijderen, partitielabel)
+  lopen nu via `render_menu`. Met `fzf` betekent dit: **dubbelklik = direct kiezen**,
+  enkele klik = markeren, en typen om te filteren. Zonder `fzf` gewoon het
+  `dialog`-menu (klik + OK). Bij een `fzf`-fout wordt automatisch teruggevallen op
+  dialog.
+
 ## [1.4.4] - 2026-07-12
 
 ### Gewijzigd
@@ -139,7 +148,8 @@ en dit project volgt [Semantic Versioning](https://semver.org/lang/nl/).
 - GitHub Actions-workflow voor lint, build en release
   (`.github/workflows/release.yml`).
 
-[Unreleased]: https://github.com/aalhabeeb/SMUI/compare/v1.4.4...HEAD
+[Unreleased]: https://github.com/aalhabeeb/SMUI/compare/v1.5.0...HEAD
+[1.5.0]: https://github.com/aalhabeeb/SMUI/releases/tag/v1.5.0
 [1.4.4]: https://github.com/aalhabeeb/SMUI/releases/tag/v1.4.4
 [1.4.3]: https://github.com/aalhabeeb/SMUI/releases/tag/v1.4.3
 [1.4.2]: https://github.com/aalhabeeb/SMUI/releases/tag/v1.4.2
