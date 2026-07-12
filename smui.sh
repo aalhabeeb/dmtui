@@ -693,7 +693,7 @@ main_menu() {
     while true; do
         local choice
         choice=$(whiptail --title "$APP_TITLE" --menu \
-            "Kies een actie (optie 1 = nieuwe disk in gebruik nemen):" \
+            "Distro: ${DISTRO_ID} | Kies een actie (optie 1 = nieuwe disk):" \
             "$DLG_H" "$DLG_W" "$LIST_H" \
             "1" ">> Nieuwe disk in gebruik nemen (begeleide wizard)" \
             "2" "Layout tonen (disks, PV/VG/LV)" \
