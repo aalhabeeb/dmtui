@@ -13,33 +13,48 @@ formatteren en mounten) op **RHEL/Rocky/Alma** en **Ubuntu/Debian**.
 
 ## Installeren op Ubuntu / Debian (.deb)
 
+Automatisch de nieuwste versie ophalen en installeren:
+
 ```bash
-# 1. Download het pakket (vervang de versie indien nodig)
-wget https://github.com/aalhabeeb/SMUI-releases/releases/download/v1.1.0/smui_1.1.0_all.deb
-
-# 2. Installeren — apt lost automatisch de dependencies op
-sudo apt install ./smui_1.1.0_all.deb
-
-# 3. Starten
+url=$(curl -s https://api.github.com/repos/aalhabeeb/SMUI-releases/releases/latest \
+  | grep -o 'https://[^"]*_all\.deb')
+curl -L -o smui.deb "$url"
+sudo apt install ./smui.deb
 sudo smui
+```
+
+Of handmatig: download de `smui_*_all.deb` van de
+[nieuwste release](https://github.com/aalhabeeb/SMUI-releases/releases/latest) en:
+
+```bash
+sudo apt install ./smui_*_all.deb
 ```
 
 > Gebruik `sudo apt install ./bestand.deb` (mét `./`), niet `dpkg -i`. Zo worden
-> de afhankelijkheden (`lvm2`, `parted`, `whiptail`, `util-linux`) automatisch
-> mee-geïnstalleerd.
+> de afhankelijkheden (`dialog`, `lvm2`, `parted`, `util-linux`, en het optionele
+> `fzf`) automatisch mee-geïnstalleerd.
 
 ## Installeren op RHEL / Rocky / Alma (.rpm)
 
+Automatisch de nieuwste versie ophalen en installeren:
+
 ```bash
-# 1. Download het pakket
-wget https://github.com/aalhabeeb/SMUI-releases/releases/download/v1.1.0/smui-1.1.0-1.noarch.rpm
-
-# 2. Installeren — dnf lost automatisch de dependencies op
-sudo dnf install ./smui-1.1.0-1.noarch.rpm
-
-# 3. Starten
+url=$(curl -s https://api.github.com/repos/aalhabeeb/SMUI-releases/releases/latest \
+  | grep -o 'https://[^"]*\.noarch\.rpm')
+curl -L -o smui.rpm "$url"
+sudo dnf install ./smui.rpm
 sudo smui
 ```
+
+Of handmatig: download de `smui-*.noarch.rpm` van de
+[nieuwste release](https://github.com/aalhabeeb/SMUI-releases/releases/latest) en:
+
+```bash
+sudo dnf install ./smui-*.noarch.rpm
+```
+
+> `fzf` (optioneel, voor filterbare lijsten met muis) zit op RHEL in **EPEL**.
+> Zonder `fzf` werkt SMUI gewoon met het `dialog`-menu.
 
 ## Gebruik
 
@@ -54,29 +69,21 @@ smui --version       # toon de versie
 Via de TUI kun je:
 
 - de opslag-layout tonen (disks, PV/VG/LV);
-- een partitie aanmaken met type **8e** (Linux LVM);
+- via de **wizard** een disk in gebruik nemen: nieuwe opslag óf toevoegen aan een
+  bestaande Volume Group (partitie type **8e** → PV → VG/LV);
 - Physical Volumes, Volume Groups en Logical Volumes aanmaken en uitbreiden;
 - filesystems formatteren en persistent mounten (`fstab` op UUID);
 - LV/VG/PV verwijderen (met dubbele bevestiging).
 
-Destructieve bewerkingen tonen eerst een preview en vragen bevestiging. De disk
-met de root-mount (`/`) wordt gedetecteerd en beschermd.
-
-## Download-URL structuur
-
-Vaste versie (aanbevolen, reproduceerbaar):
-
-```
-https://github.com/aalhabeeb/SMUI-releases/releases/download/<tag>/<bestandsnaam>
-```
-
-Bijvoorbeeld: `.../download/v1.1.0/smui_1.1.0_all.deb`
+De interface werkt met **toetsenbord én muis** (met `fzf`: dubbelklik = kiezen,
+typen = filteren). Destructieve bewerkingen tonen eerst een preview en vragen
+bevestiging. De disk met de root-mount (`/`) wordt gedetecteerd en beschermd.
 
 ## Updates
 
 Er is (nog) geen APT/YUM-repo, dus updates komen **niet** automatisch via
-`apt upgrade` / `dnf upgrade`. Download voor een nieuwe versie opnieuw het
-`.deb`/`.rpm` van de nieuwste release en installeer het over de bestaande heen.
+`apt upgrade` / `dnf upgrade`. Haal voor een nieuwe versie opnieuw het nieuwste
+`.deb`/`.rpm` op (zie hierboven) en installeer het over de bestaande heen.
 
 ## Verwijderen
 
