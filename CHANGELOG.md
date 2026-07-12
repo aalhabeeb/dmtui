@@ -7,6 +7,20 @@ en dit project volgt [Semantic Versioning](https://semver.org/lang/nl/).
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-07-12
+
+### Toegevoegd
+- Begeleide **wizard "Nieuwe disk in gebruik nemen"** als eerste menu-optie: neemt
+  een lege disk in een keer volledig in gebruik (partitie 8e -> PV -> VG -> LV ->
+  filesystem -> mounten) met slimme standaardwaarden en een duidelijke samenvatting
+  vooraf.
+
+### Gewijzigd
+- Disk-overzicht toont nu per disk een **statuslabel** (`LEEG - nieuw`,
+  `in gebruik: N partitie(s)`, `SYSTEEMDISK`), zodat direct zichtbaar is welke disk
+  nieuw en veilig te kiezen is.
+- Hoofdmenu opgesplitst in een begeleide optie en gemarkeerde geavanceerde opties.
+
 ## [1.0.1] - 2026-07-12
 
 ### Gewijzigd
@@ -36,6 +50,7 @@ en dit project volgt [Semantic Versioning](https://semver.org/lang/nl/).
 - GitHub Actions-workflow voor lint, build en release
   (`.github/workflows/release.yml`).
 
-[Unreleased]: https://github.com/aalhabeeb/SMUI/compare/v1.0.1...HEAD
+[Unreleased]: https://github.com/aalhabeeb/SMUI/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/aalhabeeb/SMUI/releases/tag/v1.1.0
 [1.0.1]: https://github.com/aalhabeeb/SMUI/releases/tag/v1.0.1
 [1.0.0]: https://github.com/aalhabeeb/SMUI/releases/tag/v1.0.0

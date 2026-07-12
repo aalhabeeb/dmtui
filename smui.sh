@@ -22,7 +22,7 @@ set -euo pipefail
 # ---------------------------------------------------------------------------
 # Constantes / globale variabelen
 # ---------------------------------------------------------------------------
-SMUI_VERSION="1.0.1"
+SMUI_VERSION="1.1.0"
 APP_TITLE="SMUI - Storage Management UI v${SMUI_VERSION}"
 PKG_MGR=""          # dnf | yum | apt-get
 DISTRO_ID=""        # rhel | ubuntu | debian | ...
@@ -142,21 +142,11 @@ input_box() {
 # ---------------------------------------------------------------------------
 # Commando-uitvoering met preview
 # ---------------------------------------------------------------------------
-# Voert een reeks commando's uit na een preview + bevestiging.
+# Voert een reeks commando's uit ZONDER extra bevestiging en toont de uitvoer.
 # Elk argument is één volledig commando (string).
-run_cmds() {
+exec_cmds() {
     local -a cmds=("$@")
-    local preview="" c
-    for c in "${cmds[@]}"; do
-        preview+="  ${c}\n"
-    done
-
-    if ! confirm_box "De volgende commando's worden uitgevoerd:\n\n${preview}\nDoorgaan?"; then
-        msg_box "Geannuleerd. Er is niets gewijzigd."
-        return 1
-    fi
-
-    local output="" rc=0
+    local output="" rc=0 c out
     for c in "${cmds[@]}"; do
         output+="\$ ${c}\n"
         if ! out=$(eval "$c" 2>&1); then
@@ -171,10 +161,55 @@ run_cmds() {
     return 0
 }
 
+# Voert een reeks commando's uit na een preview + bevestiging.
+run_cmds() {
+    local -a cmds=("$@")
+    local preview="" c
+    for c in "${cmds[@]}"; do
+        preview+="  ${c}\n"
+    done
+
+    if ! confirm_box "De volgende commando's worden uitgevoerd:\n\n${preview}\nDoorgaan?"; then
+        msg_box "Geannuleerd. Er is niets gewijzigd."
+        return 1
+    fi
+    exec_cmds "${cmds[@]}"
+}
+
 # ---------------------------------------------------------------------------
 # Selectie-helpers
 # ---------------------------------------------------------------------------
+# Geeft de partitienaam voor de eerste partitie van een disk terug.
+# nvme0n1 -> nvme0n1p1 ; sdb -> sdb1
+part_name() {
+    local disk="$1"
+    if [[ "$disk" =~ [0-9]$ ]]; then echo "${disk}p1"; else echo "${disk}1"; fi
+}
+
+# Geeft een leesbaar statuslabel voor een hele disk terug, zodat de gebruiker
+# in één oogopslag ziet welke disk nieuw/leeg is en welke in gebruik is.
+disk_status() {
+    local disk="$1"
+    if [[ -n "$ROOT_DISK" && "$disk" == "$ROOT_DISK" ]]; then
+        echo "SYSTEEMDISK (beschermd)"; return
+    fi
+    local nparts nmounts nlvm
+    nparts=$(lsblk -rno TYPE "$disk" 2>/dev/null | grep -cx 'part' || true)
+    nmounts=$(lsblk -rno MOUNTPOINT "$disk" 2>/dev/null | grep -c . || true)
+    nlvm=$(lsblk -rno TYPE "$disk" 2>/dev/null | grep -cx 'lvm' || true)
+
+    if [[ "${nparts:-0}" -eq 0 && "${nmounts:-0}" -eq 0 && "${nlvm:-0}" -eq 0 ]]; then
+        echo "LEEG - nieuw (aanbevolen)"; return
+    fi
+    local label="in gebruik"
+    [[ "${nparts:-0}" -gt 0 ]] && label="${label}: ${nparts} partitie(s)"
+    [[ "${nlvm:-0}" -gt 0 ]] && label="${label}, LVM"
+    [[ "${nmounts:-0}" -gt 0 ]] && label="${label}, gemount"
+    echo "$label"
+}
+
 # Toont een menu met hele disks (TYPE=disk) en geeft de gekozen /dev/naam terug.
+# Elke disk krijgt een statuslabel (leeg/in gebruik/systeemdisk).
 # $1 = titel-prompt
 select_disk() {
     local prompt="$1"
@@ -184,14 +219,12 @@ select_disk() {
     while read -r name size type model; do
         [[ "$type" != "disk" ]] && continue
         local dev="/dev/${name}"
-        local tag="$dev"
-        [[ "$dev" == "$ROOT_DISK" ]] && tag="$dev (SYSTEEMDISK)"
-        items+=("$dev" "${size} ${model:-} ${tag##"$dev"}")
+        items+=("$dev" "${size}  ${model:-disk}  |  $(disk_status "$dev")")
     done < <(lsblk -dno NAME,SIZE,TYPE,MODEL)
 
     [[ ${#items[@]} -eq 0 ]] && { msg_box "Geen disks gevonden."; return 1; }
 
-    whiptail --title "$APP_TITLE" --menu "$prompt" 22 90 12 "${items[@]}" 3>&1 1>&2 2>&3
+    whiptail --title "$APP_TITLE" --menu "$prompt" 22 100 12 "${items[@]}" 3>&1 1>&2 2>&3
 }
 
 # Toont een menu met blok-partities/disks die als PV bruikbaar zijn.
@@ -540,36 +573,117 @@ remove_pv() {
 }
 
 # ---------------------------------------------------------------------------
+# Wizard: nieuwe disk in één keer in gebruik nemen
+# ---------------------------------------------------------------------------
+# Begeleide flow: disk kiezen -> partitie (8e) -> PV -> VG -> LV -> filesystem
+# -> mounten. Slimme standaardwaarden en één duidelijke samenvatting vooraf.
+action_new_disk_wizard() {
+    msg_box "WIZARD - nieuwe disk in gebruik nemen\n\nDeze wizard neemt een lege disk in een keer volledig in gebruik:\npartitie (type 8e) -> LVM -> filesystem -> mounten.\n\nKies zo een disk met status 'LEEG - nieuw'.\nDe systeemdisk wordt automatisch beschermd."
+
+    local disk
+    disk=$(select_disk "Kies de disk om in gebruik te nemen\n('LEEG - nieuw' = veilige, lege disk):") || return 0
+    [[ -z "$disk" ]] && return 0
+    guard_system_disk "$disk" || return 0
+
+    # Waarschuw als de disk niet leeg is.
+    local status; status="$(disk_status "$disk")"
+    if [[ "$status" != LEEG* ]]; then
+        if ! confirm_box "LET OP: ${disk} is niet leeg.\nStatus: ${status}\n\nDe HELE disk wordt gewist als je doorgaat.\nDoorgaan?"; then
+            msg_box "Geannuleerd. Er is niets gewijzigd."
+            return 0
+        fi
+    fi
+
+    local fstype
+    fstype=$(whiptail --title "$APP_TITLE" --menu \
+        "Welk filesystem wil je op ${disk}?" 15 72 3 \
+        "ext4" "Algemeen, breed ondersteund (aanbevolen)" \
+        "xfs"  "Standaard op RHEL, sterk bij grote volumes" \
+        3>&1 1>&2 2>&3) || return 0
+
+    local mountpoint
+    mountpoint=$(input_box "Waar wil je de opslag koppelen (mountpoint)?\nDeze map wordt aangemaakt en blijft na reboot gemount." "/mnt/data") || return 0
+    [[ -z "$mountpoint" ]] && mountpoint="/mnt/data"
+
+    # Namen afleiden van het mountpoint (bijv. /mnt/data -> vg_data / lv_data).
+    local base; base="$(basename "$mountpoint")"
+    [[ -z "$base" || "$base" == "/" ]] && base="data"
+    local vg="vg_${base}"
+    local lv="lv_${base}"
+    local part; part="$(part_name "$disk")"
+
+    local mkfs_cmd="mkfs.ext4 -F"
+    [[ "$fstype" == "xfs" ]] && mkfs_cmd="mkfs.xfs -f"
+
+    # Duidelijke samenvatting in gewone taal.
+    if ! whiptail --title "$APP_TITLE" --yesno \
+"Samenvatting van wat er gaat gebeuren:\n\n\
+  Disk         : ${disk}   (wordt VOLLEDIG gewist)\n\
+  Partitie     : ${part}   (type 8e / Linux LVM)\n\
+  Volume Group : ${vg}\n\
+  Logical Vol  : ${lv}   (gebruikt 100% van de disk)\n\
+  Filesystem   : ${fstype}\n\
+  Mountpoint   : ${mountpoint}\n\n\
+Na afloop is ${mountpoint} direct bruikbaar en blijft het na een reboot\n\
+automatisch gekoppeld (via /etc/fstab).\n\n\
+Wil je dit uitvoeren?" 23 82; then
+        msg_box "Geannuleerd. Er is niets gewijzigd."
+        return 0
+    fi
+
+    local -a cmds=(
+        "parted -s ${disk} mklabel gpt"
+        "parted -s -a optimal ${disk} mkpart primary 0% 100%"
+        "parted -s ${disk} set 1 lvm on"
+        "partprobe ${disk} || udevadm settle"
+        "pvcreate -y ${part}"
+        "vgcreate ${vg} ${part}"
+        "lvcreate -l 100%FREE -n ${lv} ${vg}"
+        "${mkfs_cmd} /dev/${vg}/${lv}"
+        "mkdir -p ${mountpoint}"
+        "UUID=\$(blkid -s UUID -o value /dev/${vg}/${lv}); grep -q \"\$UUID\" /etc/fstab || echo \"UUID=\$UUID ${mountpoint} ${fstype} defaults 0 2\" >> /etc/fstab"
+        "systemctl daemon-reload 2>/dev/null || true"
+        "mount ${mountpoint}"
+    )
+
+    if exec_cmds "${cmds[@]}"; then
+        msg_box "Klaar! ${mountpoint} is nu bruikbaar.\n\nControleer met:  df -h ${mountpoint}\nOf via menu-optie 'Layout tonen'."
+    fi
+}
+
+# ---------------------------------------------------------------------------
 # Hoofdmenu
 # ---------------------------------------------------------------------------
 main_menu() {
     while true; do
         local choice
         choice=$(whiptail --title "$APP_TITLE" --menu \
-            "Distro: ${DISTRO_ID}   Systeemdisk (beschermd): ${ROOT_DISK:-onbekend}\n\nKies een actie:" \
-            24 88 12 \
-            "1" "Layout tonen (disks, PV/VG/LV)" \
-            "2" "Partitie aanmaken (type 8e / Linux LVM)" \
-            "3" "Physical Volume aanmaken (pvcreate)" \
-            "4" "Volume Group aanmaken (vgcreate)" \
-            "5" "Logical Volume aanmaken (lvcreate)" \
-            "6" "Volume Group uitbreiden (vgextend)" \
-            "7" "Logical Volume uitbreiden (lvextend)" \
-            "8" "Formatteren + mounten (mkfs + fstab)" \
-            "9" "Verwijderen (LV / VG / PV)" \
+            "Distro: ${DISTRO_ID}   Systeemdisk (beschermd): ${ROOT_DISK:-onbekend}\n\nKies een actie (begin bij optie 1 als je een nieuwe disk hebt):" \
+            25 90 13 \
+            "1" ">> Nieuwe disk in gebruik nemen (begeleide wizard)" \
+            "2" "Layout tonen (disks, PV/VG/LV)" \
+            "3" "--- Geavanceerd: Partitie aanmaken (type 8e / LVM)" \
+            "4" "Geavanceerd: Physical Volume aanmaken (pvcreate)" \
+            "5" "Geavanceerd: Volume Group aanmaken (vgcreate)" \
+            "6" "Geavanceerd: Logical Volume aanmaken (lvcreate)" \
+            "7" "Geavanceerd: Volume Group uitbreiden (vgextend)" \
+            "8" "Geavanceerd: Logical Volume uitbreiden (lvextend)" \
+            "9" "Geavanceerd: Formatteren + mounten (mkfs + fstab)" \
+            "0" "Verwijderen (LV / VG / PV)" \
             "q" "Afsluiten" \
             3>&1 1>&2 2>&3) || break
 
         case "$choice" in
-            1) action_show_layout ;;
-            2) action_create_partition ;;
-            3) action_create_pv ;;
-            4) action_create_vg ;;
-            5) action_create_lv ;;
-            6) action_extend_vg ;;
-            7) action_extend_lv ;;
-            8) action_format_mount ;;
-            9) action_remove_menu ;;
+            1) action_new_disk_wizard ;;
+            2) action_show_layout ;;
+            3) action_create_partition ;;
+            4) action_create_pv ;;
+            5) action_create_vg ;;
+            6) action_create_lv ;;
+            7) action_extend_vg ;;
+            8) action_extend_lv ;;
+            9) action_format_mount ;;
+            0) action_remove_menu ;;
             q) break ;;
             *) break ;;
         esac
