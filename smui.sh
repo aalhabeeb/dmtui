@@ -22,7 +22,7 @@ set -euo pipefail
 # ---------------------------------------------------------------------------
 # Constantes / globale variabelen
 # ---------------------------------------------------------------------------
-SMUI_VERSION="1.4.0"
+SMUI_VERSION="1.4.1"
 APP_TITLE="SMUI - Storage Management UI v${SMUI_VERSION}"
 # Vaste kopbalk boven elk venster (moderne look).
 BACKTITLE="SMUI - Storage Management UI v${SMUI_VERSION}   |   muis + pijltjestoetsen"
@@ -106,6 +106,26 @@ ensure_deps() {
     fi
 
     command -v dialog >/dev/null 2>&1 || die "dialog installeren is mislukt."
+}
+
+# Best-effort: installeer het OPTIONELE fzf (mooiere, filterbare lijsten).
+# Nooit fataal. Probeert het maar één keer (marker), zodat het niet elke start
+# opnieuw probeert als het niet beschikbaar is (bijv. RHEL zonder EPEL).
+ensure_fzf_optional() {
+    command -v fzf >/dev/null 2>&1 && return 0
+    [[ "${SMUI_NO_FZF:-0}" == "1" ]] && return 0
+
+    local marker="/var/lib/smui/.fzf-attempted"
+    [[ -f "$marker" ]] && return 0
+    mkdir -p /var/lib/smui 2>/dev/null || true
+
+    echo "Optioneel: fzf installeren voor filterbare lijsten (eenmalige poging, niet vereist)..."
+    if [[ "$PKG_MGR" == "apt-get" ]]; then
+        DEBIAN_FRONTEND=noninteractive apt-get install -y fzf >/dev/null 2>&1 || true
+    else
+        "$PKG_MGR" install -y fzf >/dev/null 2>&1 || true
+    fi
+    : >"$marker" 2>/dev/null || true
 }
 
 # Bepaal welke fysieke disk de root-mount (/) bevat, zodat we die beschermen.
@@ -936,6 +956,7 @@ main() {
     require_root
     detect_distro
     ensure_deps
+    ensure_fzf_optional
     setup_dialog_theme
     compute_dialog_size
     detect_root_disk

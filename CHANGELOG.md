@@ -7,6 +7,15 @@ en dit project volgt [Semantic Versioning](https://semver.org/lang/nl/).
 
 ## [Unreleased]
 
+## [1.4.1] - 2026-07-12
+
+### Gewijzigd
+- SMUI probeert bij de eerste start `fzf` **automatisch** te installeren
+  (best-effort, eenmalig via een marker, nooit blokkerend). Zo krijg je de
+  filterbare lijsten ook zonder handmatige installatie. Op RHEL zonder EPEL of
+  bij `SMUI_NO_FZF=1` wordt dit netjes overgeslagen en gebruikt SMUI het
+  `dialog`-menu.
+
 ## [1.4.0] - 2026-07-12
 
 ### Toegevoegd
@@ -107,7 +116,8 @@ en dit project volgt [Semantic Versioning](https://semver.org/lang/nl/).
 - GitHub Actions-workflow voor lint, build en release
   (`.github/workflows/release.yml`).
 
-[Unreleased]: https://github.com/aalhabeeb/SMUI/compare/v1.4.0...HEAD
+[Unreleased]: https://github.com/aalhabeeb/SMUI/compare/v1.4.1...HEAD
+[1.4.1]: https://github.com/aalhabeeb/SMUI/releases/tag/v1.4.1
 [1.4.0]: https://github.com/aalhabeeb/SMUI/releases/tag/v1.4.0
 [1.3.0]: https://github.com/aalhabeeb/SMUI/releases/tag/v1.3.0
 [1.2.0]: https://github.com/aalhabeeb/SMUI/releases/tag/v1.2.0
