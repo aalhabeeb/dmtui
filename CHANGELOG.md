@@ -7,6 +7,12 @@ en dit project volgt [Semantic Versioning](https://semver.org/lang/nl/).
 
 ## [Unreleased]
 
+## [1.4.4] - 2026-07-12
+
+### Gewijzigd
+- Achtergrond (desktop-backdrop) van blauw naar **zwart**; de vensters blijven
+  wit/leesbaar. Aan te passen in het `DIALOGRC`-thema (`screen_color`).
+
 ## [1.4.3] - 2026-07-12
 
 ### Gewijzigd
@@ -133,7 +139,8 @@ en dit project volgt [Semantic Versioning](https://semver.org/lang/nl/).
 - GitHub Actions-workflow voor lint, build en release
   (`.github/workflows/release.yml`).
 
-[Unreleased]: https://github.com/aalhabeeb/SMUI/compare/v1.4.3...HEAD
+[Unreleased]: https://github.com/aalhabeeb/SMUI/compare/v1.4.4...HEAD
+[1.4.4]: https://github.com/aalhabeeb/SMUI/releases/tag/v1.4.4
 [1.4.3]: https://github.com/aalhabeeb/SMUI/releases/tag/v1.4.3
 [1.4.2]: https://github.com/aalhabeeb/SMUI/releases/tag/v1.4.2
 [1.4.1]: https://github.com/aalhabeeb/SMUI/releases/tag/v1.4.1

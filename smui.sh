@@ -22,7 +22,7 @@ set -euo pipefail
 # ---------------------------------------------------------------------------
 # Constantes / globale variabelen
 # ---------------------------------------------------------------------------
-SMUI_VERSION="1.4.3"
+SMUI_VERSION="1.4.4"
 APP_TITLE="SMUI - Storage Management UI v${SMUI_VERSION}"
 # Vaste kopbalk boven elk venster (moderne look).
 BACKTITLE="SMUI - Storage Management UI v${SMUI_VERSION}   |   muis + pijltjestoetsen"
@@ -216,7 +216,7 @@ setup_dialog_theme() {
     cat >"$DIALOGRC_TMP" <<'RC'
 use_shadow = ON
 use_colors = ON
-screen_color = (CYAN,BLUE,ON)
+screen_color = (CYAN,BLACK,ON)
 shadow_color = (BLACK,BLACK,ON)
 dialog_color = (BLACK,WHITE,OFF)
 title_color = (WHITE,BLUE,ON)
