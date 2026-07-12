@@ -7,6 +7,12 @@ en dit project volgt [Semantic Versioning](https://semver.org/lang/nl/).
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-07-12
+
+### Gewijzigd
+- Release-workflow publiceert de packages nu naar de publieke repo
+  `aalhabeeb/SMUI-releases` (broncode blijft privé).
+
 ## [1.0.0] - 2026-07-12
 
 ### Toegevoegd
@@ -30,5 +36,6 @@ en dit project volgt [Semantic Versioning](https://semver.org/lang/nl/).
 - GitHub Actions-workflow voor lint, build en release
   (`.github/workflows/release.yml`).
 
-[Unreleased]: https://github.com/aalhabeeb/SMUI/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/aalhabeeb/SMUI/compare/v1.0.1...HEAD
+[1.0.1]: https://github.com/aalhabeeb/SMUI/releases/tag/v1.0.1
 [1.0.0]: https://github.com/aalhabeeb/SMUI/releases/tag/v1.0.0

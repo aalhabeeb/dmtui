@@ -22,7 +22,7 @@ set -euo pipefail
 # ---------------------------------------------------------------------------
 # Constantes / globale variabelen
 # ---------------------------------------------------------------------------
-SMUI_VERSION="1.0.0"
+SMUI_VERSION="1.0.1"
 APP_TITLE="SMUI - Storage Management UI v${SMUI_VERSION}"
 PKG_MGR=""          # dnf | yum | apt-get
 DISTRO_ID=""        # rhel | ubuntu | debian | ...
