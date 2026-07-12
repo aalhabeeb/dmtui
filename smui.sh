@@ -22,8 +22,10 @@ set -euo pipefail
 # ---------------------------------------------------------------------------
 # Constantes / globale variabelen
 # ---------------------------------------------------------------------------
-SMUI_VERSION="1.2.0"
+SMUI_VERSION="1.3.0"
 APP_TITLE="SMUI - Storage Management UI v${SMUI_VERSION}"
+# Vaste kopbalk boven elk venster (moderne look).
+BACKTITLE="SMUI - Storage Management UI v${SMUI_VERSION}   |   muis + pijltjestoetsen"
 PKG_MGR=""          # dnf | yum | apt-get
 DISTRO_ID=""        # rhel | ubuntu | debian | ...
 ROOT_DISK=""        # disk die de root-mount bevat (beschermd)
@@ -69,9 +71,9 @@ detect_distro() {
 
 # Installeer benodigde pakketten als een commando ontbreekt.
 ensure_deps() {
-    # commando -> pakketnaam (whiptail zit in 'newt' op RHEL, 'whiptail' op Debian)
+    # commando -> pakketnaam ('dialog' heet op alle distro's gewoon 'dialog').
     local -a missing=()
-    command -v whiptail >/dev/null 2>&1 || missing+=("whiptail")
+    command -v dialog   >/dev/null 2>&1 || missing+=("dialog")
     command -v lvs      >/dev/null 2>&1 || missing+=("lvm2")
     command -v parted   >/dev/null 2>&1 || missing+=("parted")
     command -v lsblk    >/dev/null 2>&1 || missing+=("util-linux")
@@ -85,11 +87,9 @@ ensure_deps() {
     local m
     for m in "${missing[@]}"; do
         case "$m" in
-            whiptail)
-                if [[ "$PKG_MGR" == "apt-get" ]]; then pkgs+=("whiptail"); else pkgs+=("newt"); fi
-                ;;
-            lvm2)      pkgs+=("lvm2") ;;
-            parted)    pkgs+=("parted") ;;
+            dialog)     pkgs+=("dialog") ;;
+            lvm2)       pkgs+=("lvm2") ;;
+            parted)     pkgs+=("parted") ;;
             util-linux) pkgs+=("util-linux") ;;
         esac
     done
@@ -104,7 +104,7 @@ ensure_deps() {
         "$PKG_MGR" install -y "${pkgs[@]}"
     fi
 
-    command -v whiptail >/dev/null 2>&1 || die "whiptail installeren is mislukt."
+    command -v dialog >/dev/null 2>&1 || die "dialog installeren is mislukt."
 }
 
 # Bepaal welke fysieke disk de root-mount (/) bevat, zodat we die beschermen.
@@ -121,10 +121,10 @@ detect_root_disk() {
 }
 
 # ---------------------------------------------------------------------------
-# Whiptail-wrappers
+# Dialog-wrappers (dialog i.p.v. whiptail: muisondersteuning + kleurthema)
 # ---------------------------------------------------------------------------
 # Bepaalt veilige dialooggroottes op basis van de werkelijke terminalgrootte,
-# zodat vensters nooit groter zijn dan de terminal (anders faalt whiptail).
+# zodat vensters nooit groter zijn dan de terminal (anders faalt dialog).
 compute_dialog_size() {
     local lines cols
     lines=$(tput lines 2>/dev/null || echo 24)
@@ -143,8 +143,8 @@ compute_dialog_size() {
     if (( DLG_W > 84 )); then DLG_W=84; fi
     if (( DLG_W < 50 )); then DLG_W=50; fi
 
-    # Lijsthoogte ruim binnen de box houden: whiptail heeft ~12 regels nodig voor
-    # titel, prompttekst, knoppen en randen. Te grote lijst => whiptail faalt.
+    # Lijsthoogte ruim binnen de box houden: dialog heeft ~12 regels nodig voor
+    # titel, prompttekst, knoppen en randen. Te grote lijst => dialog faalt.
     LIST_H=$(( DLG_H - 12 ))
     if (( LIST_H < 3 )); then LIST_H=3; fi
 
@@ -154,23 +154,26 @@ compute_dialog_size() {
 }
 
 msg_box() {
-    whiptail --title "$APP_TITLE" --msgbox "$1" "$DLG_H" "$DLG_W"
+    dialog --backtitle "$BACKTITLE" --colors --title "$APP_TITLE" --msgbox "$1" "$DLG_H" "$DLG_W"
 }
 
 info_scroll() {
-    # Toon lange tekst scrollbaar.
-    whiptail --title "$APP_TITLE" --scrolltext --msgbox "$1" "$DLG_H" "$DLG_W"
+    # Toon lange tekst scrollbaar (scrollbar + pijltjes/muis).
+    dialog --backtitle "$BACKTITLE" --colors --title "$APP_TITLE" --scrollbar --msgbox "$1" "$DLG_H" "$DLG_W"
 }
 
 confirm_box() {
     # Retourneert 0 (ja) of 1 (nee). Standaard op 'nee' voor veiligheid.
-    whiptail --title "$APP_TITLE" --defaultno --yesno "$1" "$DLG_H" "$DLG_W"
+    dialog --backtitle "$BACKTITLE" --colors --title "$APP_TITLE" --defaultno \
+        --yes-label "Ja" --no-label "Nee" --yesno "$1" "$DLG_H" "$DLG_W"
 }
 
 input_box() {
     # $1 = prompt, $2 = default. Print resultaat op stdout, of niets bij annuleren.
     local result
-    result=$(whiptail --title "$APP_TITLE" --inputbox "$1" 11 "$DLG_W" "${2:-}" 3>&1 1>&2 2>&3) || return 1
+    result=$(dialog --backtitle "$BACKTITLE" --colors --title "$APP_TITLE" \
+        --ok-label "OK" --cancel-label "Annuleren" \
+        --inputbox "$1" 11 "$DLG_W" "${2:-}" 3>&1 1>&2 2>&3) || return 1
     printf '%s' "$result"
 }
 
@@ -259,7 +262,9 @@ select_disk() {
 
     [[ ${#items[@]} -eq 0 ]] && { msg_box "Geen disks gevonden."; return 1; }
 
-    whiptail --title "$APP_TITLE" --menu "$prompt" "$DLG_H" "$DLG_W" "$LIST_H" "${items[@]}" 3>&1 1>&2 2>&3
+    dialog --backtitle "$BACKTITLE" --colors --title "$APP_TITLE" \
+        --ok-label "Kies" --cancel-label "Annuleren" \
+        --menu "$prompt" "$DLG_H" "$DLG_W" "$LIST_H" "${items[@]}" 3>&1 1>&2 2>&3
 }
 
 # Toont een menu met blok-partities/disks die als PV bruikbaar zijn.
@@ -281,7 +286,9 @@ select_block() {
 
     [[ ${#items[@]} -eq 0 ]] && { msg_box "Geen blok-apparaten gevonden."; return 1; }
 
-    whiptail --title "$APP_TITLE" --menu "$prompt" "$DLG_H" "$DLG_W" "$LIST_H" "${items[@]}" 3>&1 1>&2 2>&3
+    dialog --backtitle "$BACKTITLE" --colors --title "$APP_TITLE" \
+        --ok-label "Kies" --cancel-label "Annuleren" \
+        --menu "$prompt" "$DLG_H" "$DLG_W" "$LIST_H" "${items[@]}" 3>&1 1>&2 2>&3
 }
 
 # Menu met bestaande Volume Groups.
@@ -295,7 +302,9 @@ select_vg() {
     done < <(vgs --noheadings -o vg_name,vg_size,vg_free 2>/dev/null | awk '{print $1, $2, $3}')
 
     [[ ${#items[@]} -eq 0 ]] && { msg_box "Geen Volume Groups gevonden."; return 1; }
-    whiptail --title "$APP_TITLE" --menu "$prompt" "$DLG_H" "$DLG_W" "$LIST_H" "${items[@]}" 3>&1 1>&2 2>&3
+    dialog --backtitle "$BACKTITLE" --colors --title "$APP_TITLE" \
+        --ok-label "Kies" --cancel-label "Annuleren" \
+        --menu "$prompt" "$DLG_H" "$DLG_W" "$LIST_H" "${items[@]}" 3>&1 1>&2 2>&3
 }
 
 # Menu met bestaande Logical Volumes (geeft VG/LV-pad /dev/vg/lv terug).
@@ -309,7 +318,9 @@ select_lv() {
     done < <(lvs --noheadings -o lv_name,vg_name,lv_size 2>/dev/null | awk '{print $1, $2, $3}')
 
     [[ ${#items[@]} -eq 0 ]] && { msg_box "Geen Logical Volumes gevonden."; return 1; }
-    whiptail --title "$APP_TITLE" --menu "$prompt" "$DLG_H" "$DLG_W" "$LIST_H" "${items[@]}" 3>&1 1>&2 2>&3
+    dialog --backtitle "$BACKTITLE" --colors --title "$APP_TITLE" \
+        --ok-label "Kies" --cancel-label "Annuleren" \
+        --menu "$prompt" "$DLG_H" "$DLG_W" "$LIST_H" "${items[@]}" 3>&1 1>&2 2>&3
 }
 
 # Menu met bestaande Physical Volumes.
@@ -323,7 +334,9 @@ select_pv() {
     done < <(pvs --noheadings -o pv_name,vg_name,pv_size 2>/dev/null | awk '{print $1, $2, $3}')
 
     [[ ${#items[@]} -eq 0 ]] && { msg_box "Geen Physical Volumes gevonden."; return 1; }
-    whiptail --title "$APP_TITLE" --menu "$prompt" "$DLG_H" "$DLG_W" "$LIST_H" "${items[@]}" 3>&1 1>&2 2>&3
+    dialog --backtitle "$BACKTITLE" --colors --title "$APP_TITLE" \
+        --ok-label "Kies" --cancel-label "Annuleren" \
+        --menu "$prompt" "$DLG_H" "$DLG_W" "$LIST_H" "${items[@]}" 3>&1 1>&2 2>&3
 }
 
 # Veiligheidscheck: weiger bewerkingen op de systeemdisk.
@@ -346,7 +359,7 @@ action_create_partition() {
     guard_system_disk "$disk" || return 0
 
     local label
-    label=$(whiptail --title "$APP_TITLE" --menu \
+    label=$(dialog --backtitle "$BACKTITLE" --colors --title "$APP_TITLE" --menu \
         "Partitietabel voor ${disk}.\nLet op: 'nieuw label' WIST alle bestaande partities!" 18 78 4 \
         "keep" "Bestaande tabel behouden, alleen partitie toevoegen" \
         "gpt"  "Nieuw GPT-label (wist disk) - aanbevolen" \
@@ -492,7 +505,7 @@ action_format_mount() {
     guard_system_disk "$dev" || return 0
 
     local fstype
-    fstype=$(whiptail --title "$APP_TITLE" --menu "Kies het filesystem voor ${dev}:" 16 70 4 \
+    fstype=$(dialog --backtitle "$BACKTITLE" --colors --title "$APP_TITLE" --menu "Kies het filesystem voor ${dev}:" 16 70 4 \
         "ext4" "Algemeen, breed ondersteund" \
         "xfs"  "Standaard op RHEL, goed voor grote volumes" \
         "btrfs" "Snapshots/subvolumes" \
@@ -546,7 +559,7 @@ action_show_layout() {
 # ---------------------------------------------------------------------------
 action_remove_menu() {
     local choice
-    choice=$(whiptail --title "$APP_TITLE" --menu "Wat wil je verwijderen?" 16 70 4 \
+    choice=$(dialog --backtitle "$BACKTITLE" --colors --title "$APP_TITLE" --menu "Wat wil je verwijderen?" 16 70 4 \
         "lv" "Logical Volume verwijderen" \
         "vg" "Volume Group verwijderen" \
         "pv" "Physical Volume-signatuur verwijderen" \
@@ -638,7 +651,7 @@ wizard_extend_existing() {
 
     if [[ ${#lvitems[@]} -gt 0 ]]; then
         if confirm_box "Wil je met de nieuwe ruimte meteen een bestaand Logical Volume in ${vg} vergroten?\n\nJa  = kies een LV en groei het (inclusief filesystem).\nNee = alleen de VG uitbreiden; de ruimte blijft vrij in ${vg}."; then
-            lv=$(whiptail --title "$APP_TITLE" --menu "Kies het Logical Volume in ${vg} om te vergroten:" "$DLG_H" "$DLG_W" "$LIST_H" "${lvitems[@]}" 3>&1 1>&2 2>&3) || return 0
+            lv=$(dialog --backtitle "$BACKTITLE" --colors --title "$APP_TITLE" --ok-label "Kies" --cancel-label "Annuleren" --menu "Kies het Logical Volume in ${vg} om te vergroten:" "$DLG_H" "$DLG_W" "$LIST_H" "${lvitems[@]}" 3>&1 1>&2 2>&3) || return 0
             [[ -n "$lv" ]] && grow_lv="yes"
         fi
     fi
@@ -650,7 +663,7 @@ wizard_extend_existing() {
         lvline="  LV vergroten : nee (ruimte blijft vrij in ${vg})"
     fi
 
-    if ! whiptail --title "$APP_TITLE" --yesno \
+    if ! dialog --backtitle "$BACKTITLE" --colors --title "$APP_TITLE" --defaultno --yes-label "Ja, uitvoeren" --no-label "Annuleren" --yesno \
 "Samenvatting van wat er gaat gebeuren:\n\n\
   Disk         : ${disk}   (wordt VOLLEDIG gewist)\n\
   Partitie     : ${part}   (type 8e / Linux LVM)\n\
@@ -704,7 +717,7 @@ action_new_disk_wizard() {
 
     # Kies wat er met de disk moet gebeuren.
     local mode
-    mode=$(whiptail --title "$APP_TITLE" --menu \
+    mode=$(dialog --backtitle "$BACKTITLE" --colors --title "$APP_TITLE" --ok-label "Kies" --cancel-label "Annuleren" --menu \
         "Wat wil je met ${disk} doen?" "$DLG_H" "$DLG_W" 2 \
         "nieuw" "Nieuwe opslag aanmaken (nieuwe VG + LV + mount)" \
         "uitbreiden" "Toevoegen aan bestaande Volume Group (type 8e)" \
@@ -715,7 +728,7 @@ action_new_disk_wizard() {
     fi
 
     local fstype
-    fstype=$(whiptail --title "$APP_TITLE" --menu \
+    fstype=$(dialog --backtitle "$BACKTITLE" --colors --title "$APP_TITLE" --ok-label "Kies" --cancel-label "Annuleren" --menu \
         "Welk filesystem wil je op ${disk}?" 15 72 3 \
         "ext4" "Algemeen, breed ondersteund (aanbevolen)" \
         "xfs"  "Standaard op RHEL, sterk bij grote volumes" \
@@ -736,7 +749,7 @@ action_new_disk_wizard() {
     [[ "$fstype" == "xfs" ]] && mkfs_cmd="mkfs.xfs -f"
 
     # Duidelijke samenvatting in gewone taal.
-    if ! whiptail --title "$APP_TITLE" --yesno \
+    if ! dialog --backtitle "$BACKTITLE" --colors --title "$APP_TITLE" --defaultno --yes-label "Ja, uitvoeren" --no-label "Annuleren" --yesno \
 "Samenvatting van wat er gaat gebeuren:\n\n\
   Disk         : ${disk}   (wordt VOLLEDIG gewist)\n\
   Partitie     : ${part}   (type 8e / Linux LVM)\n\
@@ -777,7 +790,7 @@ Wil je dit uitvoeren?" "$DLG_H" "$DLG_W"; then
 main_menu() {
     while true; do
         local choice
-        if ! choice=$(whiptail --title "$APP_TITLE" --menu \
+        if ! choice=$(dialog --backtitle "$BACKTITLE" --colors --title "$APP_TITLE" --ok-label "Kies" --cancel-label "Afsluiten" --menu \
             "Distro: ${DISTRO_ID} | Kies een actie (optie 1 = nieuwe disk):" \
             "$DLG_H" "$DLG_W" "$LIST_H" \
             "1" "Nieuwe disk in gebruik nemen (WIZARD, aanbevolen)" \
@@ -792,12 +805,12 @@ main_menu() {
             "0" "Verwijderen (LV / VG / PV)" \
             "q" "Afsluiten" \
             3>&1 1>&2 2>&3); then
-            # Niet-nul: gebruiker koos Annuleren/Esc, OF whiptail gaf een fout.
+            # Niet-nul: gebruiker koos Annuleren/Esc, OF dialog gaf een fout.
             # Bij een fout staat de melding in $choice (via de fd-swap opgevangen).
             if [[ -n "$choice" ]]; then
                 clear
                 echo "SMUI: het menu kon niet worden getoond." >&2
-                echo "whiptail-melding: $choice" >&2
+                echo "dialog-melding: $choice" >&2
             fi
             break
         fi

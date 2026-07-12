@@ -40,18 +40,17 @@ contents:
     file_info:
       mode: 0644
 
-# Runtime-afhankelijkheden verschillen per formaat: whiptail zit in 'newt' op
-# RPM-distro's en in 'whiptail' op Debian/Ubuntu.
+# Runtime-afhankelijkheden. 'dialog' heet op alle distro's gewoon 'dialog'.
 overrides:
   deb:
     depends:
       - lvm2
       - parted
       - util-linux
-      - whiptail
+      - dialog
   rpm:
     depends:
       - lvm2
       - parted
       - util-linux
-      - newt
+      - dialog

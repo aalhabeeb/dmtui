@@ -5,7 +5,8 @@ Een **nmtui-achtige TUI voor opslagbeheer** op Linux. Werkt op zowel
 
 In plaats van losse commando's als `parted`, `pvcreate`, `vgcreate`, `lvcreate`
 en `mkfs` uit je hoofd te typen, biedt SMUI een menugestuurde interface
-(gebaseerd op `whiptail`) met bevestigingen en een preview van elk commando
+(gebaseerd op `dialog`, met **muisondersteuning** en een kleurthema) met
+bevestigingen en een preview van elk commando
 voordat het wordt uitgevoerd.
 
 ## Functies
@@ -39,7 +40,7 @@ De volgende pakketten worden automatisch geïnstalleerd als ze ontbreken:
 
 | Commando   | RHEL-pakket   | Debian/Ubuntu-pakket |
 |------------|---------------|----------------------|
-| `whiptail` | `newt`        | `whiptail`           |
+| `dialog`   | `dialog`      | `dialog`             |
 | `lvs`/lvm  | `lvm2`        | `lvm2`               |
 | `parted`   | `parted`      | `parted`             |
 | `lsblk`/`blkid` | `util-linux` | `util-linux`    |
@@ -92,7 +93,7 @@ sudo dnf install ./dist/smui-1.0.0-1.noarch.rpm
 
 Het pakket installeert `smui` naar `/usr/bin/smui`, een manpage naar
 `man 1 smui`, en declareert de runtime-afhankelijkheden (`lvm2`, `parted`,
-`util-linux`, en `whiptail`/`newt`). Daarna starten met:
+`util-linux`, en `dialog`). Daarna starten met:
 
 ```bash
 sudo smui

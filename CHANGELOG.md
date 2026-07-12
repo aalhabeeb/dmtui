@@ -7,6 +7,16 @@ en dit project volgt [Semantic Versioning](https://semver.org/lang/nl/).
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-07-12
+
+### Gewijzigd
+- **Modernere UI:** overgestapt van `whiptail` naar `dialog`. Dit geeft
+  **muisondersteuning** (klikken op keuzes en knoppen), een **kleurthema** met een
+  vaste kopbalk (backtitle), en Nederlandse knoplabels (Ja/Nee/Kies/Annuleren).
+  Toetsenbordbediening (pijltjes/Tab) blijft gewoon werken.
+- Runtime-dependency is nu `dialog` (in plaats van `whiptail`/`newt`); zit in de
+  standaard apt- én dnf-repos.
+
 ## [1.2.0] - 2026-07-12
 
 ### Toegevoegd
@@ -87,7 +97,8 @@ en dit project volgt [Semantic Versioning](https://semver.org/lang/nl/).
 - GitHub Actions-workflow voor lint, build en release
   (`.github/workflows/release.yml`).
 
-[Unreleased]: https://github.com/aalhabeeb/SMUI/compare/v1.2.0...HEAD
+[Unreleased]: https://github.com/aalhabeeb/SMUI/compare/v1.3.0...HEAD
+[1.3.0]: https://github.com/aalhabeeb/SMUI/releases/tag/v1.3.0
 [1.2.0]: https://github.com/aalhabeeb/SMUI/releases/tag/v1.2.0
 [1.1.3]: https://github.com/aalhabeeb/SMUI/releases/tag/v1.1.3
 [1.1.2]: https://github.com/aalhabeeb/SMUI/releases/tag/v1.1.2
