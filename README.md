@@ -15,10 +15,10 @@ formatteren en mounten) op **RHEL/Rocky/Alma** en **Ubuntu/Debian**.
 
 ```bash
 # 1. Download het pakket (vervang de versie indien nodig)
-wget https://github.com/aalhabeeb/SMUI-releases/releases/download/v1.0.1/smui_1.0.1_all.deb
+wget https://github.com/aalhabeeb/SMUI-releases/releases/download/v1.1.0/smui_1.1.0_all.deb
 
 # 2. Installeren — apt lost automatisch de dependencies op
-sudo apt install ./smui_1.0.1_all.deb
+sudo apt install ./smui_1.1.0_all.deb
 
 # 3. Starten
 sudo smui
@@ -32,10 +32,10 @@ sudo smui
 
 ```bash
 # 1. Download het pakket
-wget https://github.com/aalhabeeb/SMUI-releases/releases/download/v1.0.1/smui-1.0.1-1.noarch.rpm
+wget https://github.com/aalhabeeb/SMUI-releases/releases/download/v1.1.0/smui-1.1.0-1.noarch.rpm
 
 # 2. Installeren — dnf lost automatisch de dependencies op
-sudo dnf install ./smui-1.0.1-1.noarch.rpm
+sudo dnf install ./smui-1.1.0-1.noarch.rpm
 
 # 3. Starten
 sudo smui
@@ -70,7 +70,7 @@ Vaste versie (aanbevolen, reproduceerbaar):
 https://github.com/aalhabeeb/SMUI-releases/releases/download/<tag>/<bestandsnaam>
 ```
 
-Bijvoorbeeld: `.../download/v1.0.1/smui_1.0.1_all.deb`
+Bijvoorbeeld: `.../download/v1.1.0/smui_1.1.0_all.deb`
 
 ## Updates
 
