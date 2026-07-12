@@ -88,21 +88,22 @@ Bouwen (op een Linux-host):
 ```
 
 Staat `nfpm` niet in `PATH`, dan downloadt het script automatisch een gepinde
-versie naar `./bin`. Resultaat in `./dist/`:
+versie naar `./bin`. Resultaat in `./dist/` (waarbij `<versie>` = `SMUI_VERSION`
+uit `smui.sh`):
 
 ```text
-dist/smui_1.0.0_all.deb
-dist/smui-1.0.0-1.noarch.rpm
+dist/smui_<versie>_all.deb
+dist/smui-<versie>-1.noarch.rpm
 ```
 
-Installeren:
+Installeren (de glob pakt automatisch de nieuwste gebouwde versie):
 
 ```bash
 # Debian/Ubuntu
-sudo apt install ./dist/smui_1.0.0_all.deb
+sudo apt install ./dist/smui_*_all.deb
 
 # RHEL/Rocky/Alma
-sudo dnf install ./dist/smui-1.0.0-1.noarch.rpm
+sudo dnf install ./dist/smui-*.noarch.rpm
 ```
 
 Het pakket installeert `smui` naar `/usr/bin/smui`, een manpage naar
@@ -124,13 +125,13 @@ de packages automatisch met GitHub Actions:
   De tag moet overeenkomen met `SMUI_VERSION` in `smui.sh` (anders faalt de build).
 - **Handmatige run** (workflow_dispatch) → build + upload als artefact.
 
-Een release maken:
+Een release maken (vervang `X.Y.Z` door het nieuwe versienummer):
 
 ```bash
-# 1. Bump de versie in smui.sh (SMUI_VERSION="x.y.z")
+# 1. Bump de versie in smui.sh (SMUI_VERSION="X.Y.Z")
 # 2. Commit en tag
-git commit -am "release: v1.0.0"
-git tag v1.0.0
+git commit -am "release: vX.Y.Z"
+git tag vX.Y.Z
 git push origin main --tags
 ```
 
