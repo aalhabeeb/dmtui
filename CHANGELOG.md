@@ -7,6 +7,14 @@ en dit project volgt [Semantic Versioning](https://semver.org/lang/nl/).
 
 ## [Unreleased]
 
+## [1.4.3] - 2026-07-12
+
+### Gewijzigd
+- **Layout tonen** gebruikt nu een echte tekstviewer (`dialog --textbox`) die de
+  uitvoer letterlijk toont, zodat de kolommen van `lsblk`/`pvs`/`vgs`/`lvs` netjes
+  uitgelijnd blijven (voorheen vouwde de msgbox spaties samen en liepen de kolommen
+  door elkaar). De LVM-overzichten tonen alleen de nuttige kolommen.
+
 ## [1.4.2] - 2026-07-12
 
 ### Opgelost
@@ -125,7 +133,8 @@ en dit project volgt [Semantic Versioning](https://semver.org/lang/nl/).
 - GitHub Actions-workflow voor lint, build en release
   (`.github/workflows/release.yml`).
 
-[Unreleased]: https://github.com/aalhabeeb/SMUI/compare/v1.4.2...HEAD
+[Unreleased]: https://github.com/aalhabeeb/SMUI/compare/v1.4.3...HEAD
+[1.4.3]: https://github.com/aalhabeeb/SMUI/releases/tag/v1.4.3
 [1.4.2]: https://github.com/aalhabeeb/SMUI/releases/tag/v1.4.2
 [1.4.1]: https://github.com/aalhabeeb/SMUI/releases/tag/v1.4.1
 [1.4.0]: https://github.com/aalhabeeb/SMUI/releases/tag/v1.4.0

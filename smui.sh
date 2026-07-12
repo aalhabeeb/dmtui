@@ -22,7 +22,7 @@ set -euo pipefail
 # ---------------------------------------------------------------------------
 # Constantes / globale variabelen
 # ---------------------------------------------------------------------------
-SMUI_VERSION="1.4.2"
+SMUI_VERSION="1.4.3"
 APP_TITLE="SMUI - Storage Management UI v${SMUI_VERSION}"
 # Vaste kopbalk boven elk venster (moderne look).
 BACKTITLE="SMUI - Storage Management UI v${SMUI_VERSION}   |   muis + pijltjestoetsen"
@@ -181,6 +181,17 @@ msg_box() {
 info_scroll() {
     # Toon lange tekst scrollbaar (scrollbar + pijltjes/muis).
     dialog --backtitle "$BACKTITLE" --colors --title "$APP_TITLE" --scrollbar --msgbox "$1" "$DLG_H" "$DLG_W"
+}
+
+# Toont tekst/uitvoer LETTERLIJK in een scrollbare tekstviewer (kolommen blijven
+# uitgelijnd, i.t.t. msgbox die spaties samenvouwt). $1 = titel, $2 = inhoud.
+text_view() {
+    local title="$1" content="$2" tmp
+    tmp=$(mktemp 2>/dev/null) || { info_scroll "$content"; return; }
+    # Zet eventuele letterlijke "\n" om naar echte regeleindes.
+    printf '%s\n' "${content//\\n/$'\n'}" >"$tmp"
+    dialog --backtitle "$BACKTITLE" --title "$title" --textbox "$tmp" "$DLG_H" "$DLG_W"
+    rm -f "$tmp"
 }
 
 confirm_box() {
@@ -635,15 +646,15 @@ action_format_mount() {
 # ---------------------------------------------------------------------------
 action_show_layout() {
     local out=""
-    out+="=== BLOK-APPARATEN (lsblk) ===\n"
+    out+="=== DISKS & PARTITIES (lsblk) ===\n"
     out+="$(lsblk -o NAME,SIZE,TYPE,FSTYPE,MOUNTPOINT 2>&1)\n\n"
     out+="=== PHYSICAL VOLUMES (pvs) ===\n"
-    out+="$(pvs 2>&1 || echo 'geen')\n\n"
+    out+="$(pvs -o pv_name,vg_name,pv_size,pv_free 2>&1 || echo 'geen')\n\n"
     out+="=== VOLUME GROUPS (vgs) ===\n"
-    out+="$(vgs 2>&1 || echo 'geen')\n\n"
+    out+="$(vgs -o vg_name,pv_count,lv_count,vg_size,vg_free 2>&1 || echo 'geen')\n\n"
     out+="=== LOGICAL VOLUMES (lvs) ===\n"
-    out+="$(lvs 2>&1 || echo 'geen')\n"
-    info_scroll "$out"
+    out+="$(lvs -o lv_name,vg_name,lv_size,lv_attr 2>&1 || echo 'geen')\n"
+    text_view "Opslag-layout" "$out"
 }
 
 # ---------------------------------------------------------------------------
