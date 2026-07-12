@@ -22,11 +22,16 @@ set -euo pipefail
 # ---------------------------------------------------------------------------
 # Constantes / globale variabelen
 # ---------------------------------------------------------------------------
-SMUI_VERSION="1.1.0"
+SMUI_VERSION="1.1.1"
 APP_TITLE="SMUI - Storage Management UI v${SMUI_VERSION}"
 PKG_MGR=""          # dnf | yum | apt-get
 DISTRO_ID=""        # rhel | ubuntu | debian | ...
 ROOT_DISK=""        # disk die de root-mount bevat (beschermd)
+
+# Dialooggroottes (worden aangepast aan de terminal in compute_dialog_size).
+DLG_H=20            # hoogte voor vensters/menu's
+DLG_W=76            # breedte voor vensters/menu's
+LIST_H=12           # aantal zichtbare regels in een menu-lijst
 
 # ---------------------------------------------------------------------------
 # Basis-helpers
@@ -118,24 +123,41 @@ detect_root_disk() {
 # ---------------------------------------------------------------------------
 # Whiptail-wrappers
 # ---------------------------------------------------------------------------
+# Bepaalt veilige dialooggroottes op basis van de werkelijke terminalgrootte,
+# zodat vensters nooit groter zijn dan de terminal (anders faalt whiptail).
+compute_dialog_size() {
+    local lines cols
+    lines=$(tput lines 2>/dev/null || echo 24)
+    cols=$(tput cols 2>/dev/null || echo 80)
+
+    if (( lines > 24 )); then DLG_H=22; else DLG_H=$(( lines - 2 )); fi
+    if (( DLG_H < 12 )); then DLG_H=12; fi
+
+    if (( cols > 84 )); then DLG_W=80; else DLG_W=$(( cols - 4 )); fi
+    if (( DLG_W < 60 )); then DLG_W=60; fi
+
+    LIST_H=$(( DLG_H - 8 ))
+    if (( LIST_H < 4 )); then LIST_H=4; fi
+}
+
 msg_box() {
-    whiptail --title "$APP_TITLE" --msgbox "$1" 20 78
+    whiptail --title "$APP_TITLE" --msgbox "$1" "$DLG_H" "$DLG_W"
 }
 
 info_scroll() {
     # Toon lange tekst scrollbaar.
-    whiptail --title "$APP_TITLE" --scrolltext --msgbox "$1" 24 100
+    whiptail --title "$APP_TITLE" --scrolltext --msgbox "$1" "$DLG_H" "$DLG_W"
 }
 
 confirm_box() {
     # Retourneert 0 (ja) of 1 (nee). Standaard op 'nee' voor veiligheid.
-    whiptail --title "$APP_TITLE" --defaultno --yesno "$1" 18 78
+    whiptail --title "$APP_TITLE" --defaultno --yesno "$1" "$DLG_H" "$DLG_W"
 }
 
 input_box() {
     # $1 = prompt, $2 = default. Print resultaat op stdout, of niets bij annuleren.
     local result
-    result=$(whiptail --title "$APP_TITLE" --inputbox "$1" 12 78 "${2:-}" 3>&1 1>&2 2>&3) || return 1
+    result=$(whiptail --title "$APP_TITLE" --inputbox "$1" 11 "$DLG_W" "${2:-}" 3>&1 1>&2 2>&3) || return 1
     printf '%s' "$result"
 }
 
@@ -224,7 +246,7 @@ select_disk() {
 
     [[ ${#items[@]} -eq 0 ]] && { msg_box "Geen disks gevonden."; return 1; }
 
-    whiptail --title "$APP_TITLE" --menu "$prompt" 22 100 12 "${items[@]}" 3>&1 1>&2 2>&3
+    whiptail --title "$APP_TITLE" --menu "$prompt" "$DLG_H" "$DLG_W" "$LIST_H" "${items[@]}" 3>&1 1>&2 2>&3
 }
 
 # Toont een menu met blok-partities/disks die als PV bruikbaar zijn.
@@ -246,7 +268,7 @@ select_block() {
 
     [[ ${#items[@]} -eq 0 ]] && { msg_box "Geen blok-apparaten gevonden."; return 1; }
 
-    whiptail --title "$APP_TITLE" --menu "$prompt" 24 90 14 "${items[@]}" 3>&1 1>&2 2>&3
+    whiptail --title "$APP_TITLE" --menu "$prompt" "$DLG_H" "$DLG_W" "$LIST_H" "${items[@]}" 3>&1 1>&2 2>&3
 }
 
 # Menu met bestaande Volume Groups.
@@ -260,7 +282,7 @@ select_vg() {
     done < <(vgs --noheadings -o vg_name,vg_size,vg_free 2>/dev/null | awk '{print $1, $2, $3}')
 
     [[ ${#items[@]} -eq 0 ]] && { msg_box "Geen Volume Groups gevonden."; return 1; }
-    whiptail --title "$APP_TITLE" --menu "$prompt" 20 80 10 "${items[@]}" 3>&1 1>&2 2>&3
+    whiptail --title "$APP_TITLE" --menu "$prompt" "$DLG_H" "$DLG_W" "$LIST_H" "${items[@]}" 3>&1 1>&2 2>&3
 }
 
 # Menu met bestaande Logical Volumes (geeft VG/LV-pad /dev/vg/lv terug).
@@ -274,7 +296,7 @@ select_lv() {
     done < <(lvs --noheadings -o lv_name,vg_name,lv_size 2>/dev/null | awk '{print $1, $2, $3}')
 
     [[ ${#items[@]} -eq 0 ]] && { msg_box "Geen Logical Volumes gevonden."; return 1; }
-    whiptail --title "$APP_TITLE" --menu "$prompt" 20 90 10 "${items[@]}" 3>&1 1>&2 2>&3
+    whiptail --title "$APP_TITLE" --menu "$prompt" "$DLG_H" "$DLG_W" "$LIST_H" "${items[@]}" 3>&1 1>&2 2>&3
 }
 
 # Menu met bestaande Physical Volumes.
@@ -288,7 +310,7 @@ select_pv() {
     done < <(pvs --noheadings -o pv_name,vg_name,pv_size 2>/dev/null | awk '{print $1, $2, $3}')
 
     [[ ${#items[@]} -eq 0 ]] && { msg_box "Geen Physical Volumes gevonden."; return 1; }
-    whiptail --title "$APP_TITLE" --menu "$prompt" 20 90 10 "${items[@]}" 3>&1 1>&2 2>&3
+    whiptail --title "$APP_TITLE" --menu "$prompt" "$DLG_H" "$DLG_W" "$LIST_H" "${items[@]}" 3>&1 1>&2 2>&3
 }
 
 # Veiligheidscheck: weiger bewerkingen op de systeemdisk.
@@ -626,7 +648,7 @@ action_new_disk_wizard() {
   Mountpoint   : ${mountpoint}\n\n\
 Na afloop is ${mountpoint} direct bruikbaar en blijft het na een reboot\n\
 automatisch gekoppeld (via /etc/fstab).\n\n\
-Wil je dit uitvoeren?" 23 82; then
+Wil je dit uitvoeren?" "$DLG_H" "$DLG_W"; then
         msg_box "Geannuleerd. Er is niets gewijzigd."
         return 0
     fi
@@ -659,7 +681,7 @@ main_menu() {
         local choice
         choice=$(whiptail --title "$APP_TITLE" --menu \
             "Distro: ${DISTRO_ID}   Systeemdisk (beschermd): ${ROOT_DISK:-onbekend}\n\nKies een actie (begin bij optie 1 als je een nieuwe disk hebt):" \
-            25 90 13 \
+            "$DLG_H" "$DLG_W" "$LIST_H" \
             "1" ">> Nieuwe disk in gebruik nemen (begeleide wizard)" \
             "2" "Layout tonen (disks, PV/VG/LV)" \
             "3" "--- Geavanceerd: Partitie aanmaken (type 8e / LVM)" \
@@ -726,6 +748,7 @@ main() {
     require_root
     detect_distro
     ensure_deps
+    compute_dialog_size
     detect_root_disk
     main_menu
 }
