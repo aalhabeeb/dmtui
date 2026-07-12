@@ -22,7 +22,7 @@ set -euo pipefail
 # ---------------------------------------------------------------------------
 # Constantes / globale variabelen
 # ---------------------------------------------------------------------------
-SMUI_VERSION="1.5.0"
+SMUI_VERSION="1.5.1"
 APP_TITLE="SMUI - Storage Management UI v${SMUI_VERSION}"
 # Vaste kopbalk boven elk venster (moderne look).
 BACKTITLE="SMUI - Storage Management UI v${SMUI_VERSION}   |   muis + pijltjestoetsen"

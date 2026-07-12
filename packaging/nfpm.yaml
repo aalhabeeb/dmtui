@@ -9,9 +9,9 @@ platform: "linux"
 version: "${SMUI_VERSION}"
 section: "admin"
 priority: "optional"
-maintainer: "Amjed <amjed@homelab.local>"
-vendor: "Homelab"
-homepage: "https://github.com/aalhabeeb/SMUI"
+maintainer: "lean-it.nl <info@lean-it.nl>"
+vendor: "lean-it.nl"
+homepage: "https://lean-it.nl"
 license: "MIT"
 description: |
   SMUI - Storage Management UI.
