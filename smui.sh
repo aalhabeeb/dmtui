@@ -22,7 +22,7 @@ set -euo pipefail
 # ---------------------------------------------------------------------------
 # Constantes / globale variabelen
 # ---------------------------------------------------------------------------
-SMUI_VERSION="1.1.3"
+SMUI_VERSION="1.2.0"
 APP_TITLE="SMUI - Storage Management UI v${SMUI_VERSION}"
 PKG_MGR=""          # dnf | yum | apt-get
 DISTRO_ID=""        # rhel | ubuntu | debian | ...
@@ -610,10 +610,83 @@ remove_pv() {
 # ---------------------------------------------------------------------------
 # Wizard: nieuwe disk in één keer in gebruik nemen
 # ---------------------------------------------------------------------------
+# Voegt een nieuwe disk toe aan een BESTAANDE Volume Group: partitie (8e) ->
+# pvcreate -> vgextend, en optioneel meteen een bestaand LV vergroten (fs groeit
+# mee). $1 = de gekozen disk (bijv. /dev/sdc).
+wizard_extend_existing() {
+    local disk="$1"
+    local part; part="$(part_name "$disk")"
+
+    # Zijn er Volume Groups om aan toe te voegen?
+    if ! vgs --noheadings -o vg_name 2>/dev/null | grep -q .; then
+        msg_box "Er zijn nog geen Volume Groups om aan toe te voegen.\nMaak eerst nieuwe opslag aan via de wizard-optie 'Nieuwe opslag'."
+        return 0
+    fi
+
+    local vg
+    vg=$(select_vg "Kies de Volume Group om ${disk} aan toe te voegen:") || return 0
+    [[ -z "$vg" ]] && return 0
+
+    # Optioneel: meteen een bestaand LV in die VG vergroten.
+    local grow_lv="" lv=""
+    local -a lvitems=()
+    local lvn lvsz
+    while read -r lvn lvsz; do
+        [[ -z "$lvn" ]] && continue
+        lvitems+=("/dev/${vg}/${lvn}" "grootte=${lvsz}")
+    done < <(lvs --noheadings -o lv_name,lv_size --select "vg_name=${vg}" 2>/dev/null | awk '{print $1, $2}')
+
+    if [[ ${#lvitems[@]} -gt 0 ]]; then
+        if confirm_box "Wil je met de nieuwe ruimte meteen een bestaand Logical Volume in ${vg} vergroten?\n\nJa  = kies een LV en groei het (inclusief filesystem).\nNee = alleen de VG uitbreiden; de ruimte blijft vrij in ${vg}."; then
+            lv=$(whiptail --title "$APP_TITLE" --menu "Kies het Logical Volume in ${vg} om te vergroten:" "$DLG_H" "$DLG_W" "$LIST_H" "${lvitems[@]}" 3>&1 1>&2 2>&3) || return 0
+            [[ -n "$lv" ]] && grow_lv="yes"
+        fi
+    fi
+
+    local lvline
+    if [[ "$grow_lv" == "yes" ]]; then
+        lvline="  LV vergroten : ${lv} (+alle nieuwe ruimte, filesystem groeit mee)"
+    else
+        lvline="  LV vergroten : nee (ruimte blijft vrij in ${vg})"
+    fi
+
+    if ! whiptail --title "$APP_TITLE" --yesno \
+"Samenvatting van wat er gaat gebeuren:\n\n\
+  Disk         : ${disk}   (wordt VOLLEDIG gewist)\n\
+  Partitie     : ${part}   (type 8e / Linux LVM)\n\
+  Toevoegen aan: Volume Group ${vg}\n\
+${lvline}\n\n\
+Wil je dit uitvoeren?" "$DLG_H" "$DLG_W"; then
+        msg_box "Geannuleerd. Er is niets gewijzigd."
+        return 0
+    fi
+
+    local -a cmds=(
+        "parted -s ${disk} mklabel gpt"
+        "parted -s -a optimal ${disk} mkpart primary 0% 100%"
+        "parted -s ${disk} set 1 lvm on"
+        "partprobe ${disk} || udevadm settle"
+        "pvcreate -y ${part}"
+        "vgextend ${vg} ${part}"
+    )
+    [[ "$grow_lv" == "yes" ]] && cmds+=("lvextend -l +100%FREE -r ${lv}")
+
+    if exec_cmds "${cmds[@]}"; then
+        if [[ "$grow_lv" == "yes" ]]; then
+            msg_box "Klaar! ${lv} is vergroot met de ruimte van ${disk}.\n\nControleer met:  df -h   of   lvs"
+        else
+            msg_box "Klaar! ${vg} is uitgebreid met ${part}.\nDe extra ruimte is nu vrij in ${vg} (zie 'Layout tonen')."
+        fi
+    fi
+}
+
+# ---------------------------------------------------------------------------
+# Wizard: nieuwe disk in één keer in gebruik nemen
+# ---------------------------------------------------------------------------
 # Begeleide flow: disk kiezen -> partitie (8e) -> PV -> VG -> LV -> filesystem
 # -> mounten. Slimme standaardwaarden en één duidelijke samenvatting vooraf.
 action_new_disk_wizard() {
-    msg_box "WIZARD - nieuwe disk in gebruik nemen\n\nDeze wizard neemt een lege disk in een keer volledig in gebruik:\npartitie (type 8e) -> LVM -> filesystem -> mounten.\n\nKies zo een disk met status 'LEEG - nieuw'.\nDe systeemdisk wordt automatisch beschermd."
+    msg_box "WIZARD - disk in gebruik nemen\n\nJe kunt een disk op twee manieren gebruiken:\n 1) Nieuwe opslag aanmaken (nieuwe VG + LV + mount).\n 2) Toevoegen aan een bestaande Volume Group (uitbreiden),\n    met een partitie van type 8e.\n\nDe systeemdisk wordt automatisch beschermd."
 
     local disk
     disk=$(select_disk "Kies de disk om in gebruik te nemen\n('LEEG - nieuw' = veilige, lege disk):") || return 0
@@ -627,6 +700,18 @@ action_new_disk_wizard() {
             msg_box "Geannuleerd. Er is niets gewijzigd."
             return 0
         fi
+    fi
+
+    # Kies wat er met de disk moet gebeuren.
+    local mode
+    mode=$(whiptail --title "$APP_TITLE" --menu \
+        "Wat wil je met ${disk} doen?" "$DLG_H" "$DLG_W" 2 \
+        "nieuw" "Nieuwe opslag aanmaken (nieuwe VG + LV + mount)" \
+        "uitbreiden" "Toevoegen aan bestaande Volume Group (type 8e)" \
+        3>&1 1>&2 2>&3) || return 0
+    if [[ "$mode" == "uitbreiden" ]]; then
+        wizard_extend_existing "$disk"
+        return 0
     fi
 
     local fstype

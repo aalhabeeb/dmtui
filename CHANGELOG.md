@@ -7,6 +7,15 @@ en dit project volgt [Semantic Versioning](https://semver.org/lang/nl/).
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-07-12
+
+### Toegevoegd
+- De wizard vraagt nu wat je met de disk wilt doen:
+  - **Nieuwe opslag** aanmaken (nieuwe VG + LV + mount), zoals voorheen; of
+  - **Toevoegen aan een bestaande Volume Group**: partitie (type 8e) -> `pvcreate`
+    -> `vgextend`, en optioneel meteen een bestaand Logical Volume vergroten
+    (`lvextend -l +100%FREE -r`, filesystem groeit mee).
+
 ## [1.1.3] - 2026-07-12
 
 ### Opgelost
@@ -78,7 +87,8 @@ en dit project volgt [Semantic Versioning](https://semver.org/lang/nl/).
 - GitHub Actions-workflow voor lint, build en release
   (`.github/workflows/release.yml`).
 
-[Unreleased]: https://github.com/aalhabeeb/SMUI/compare/v1.1.3...HEAD
+[Unreleased]: https://github.com/aalhabeeb/SMUI/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/aalhabeeb/SMUI/releases/tag/v1.2.0
 [1.1.3]: https://github.com/aalhabeeb/SMUI/releases/tag/v1.1.3
 [1.1.2]: https://github.com/aalhabeeb/SMUI/releases/tag/v1.1.2
 [1.1.1]: https://github.com/aalhabeeb/SMUI/releases/tag/v1.1.1
