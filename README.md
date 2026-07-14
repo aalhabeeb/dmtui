@@ -138,14 +138,14 @@ git push origin main --tags
 ### Publieke packages, privé broncode
 
 De workflow publiceert de packages naar een aparte **publieke** repo
-(`aalhabeeb/dmtui-releases`), terwijl deze broncode-repo **privé** blijft. Zo kan
+(`aalhabeeb/dmtui`), terwijl deze broncode-repo **privé** blijft. Zo kan
 iedereen de `.deb`/`.rpm` downloaden zonder de code te zien.
 
 Eenmalige setup:
 
-1. Maak een **publieke** repo aan: `aalhabeeb/dmtui-releases` (leeg is prima).
+1. Maak een **publieke** repo aan: `aalhabeeb/dmtui` (leeg is prima).
 2. Maak een **Personal Access Token** met schrijfrechten op die repo:
-   - *Fine-grained token* → repository `dmtui-releases` → permission
+   - *Fine-grained token* → repository `dmtui` → permission
      **Contents: Read and write**.
 3. Voeg het token toe als **secret** in de privé-repo `SMUI`:
    - Settings → Secrets and variables → Actions → New repository secret →
@@ -158,7 +158,7 @@ Downloaden (openbaar, geen auth nodig):
 
 ```bash
 # Nieuwste release-assets
-https://github.com/aalhabeeb/dmtui-releases/releases/latest
+https://github.com/aalhabeeb/dmtui/releases/latest
 ```
 
 ## Licentie & wijzigingen

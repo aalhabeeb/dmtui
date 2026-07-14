@@ -139,7 +139,7 @@ en dit project volgt [Semantic Versioning](https://semver.org/lang/nl/).
 
 ### Gewijzigd
 - Release-workflow publiceert de packages nu naar de publieke repo
-  `aalhabeeb/dmtui-releases` (broncode blijft privé).
+  `aalhabeeb/dmtui` (broncode blijft privé).
 
 ## [1.0.0] - 2026-07-12
 

@@ -64,7 +64,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           # Broncode blijft privé; alleen de packages landen in deze publieke repo.
-          repository: aalhabeeb/dmtui-releases
+          repository: aalhabeeb/dmtui
           token: ${{ secrets.RELEASES_TOKEN }}
           tag_name: ${{ github.ref_name }}
           name: dmtui ${{ github.ref_name }}
