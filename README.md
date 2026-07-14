@@ -1,8 +1,8 @@
 # dmtui — Disk Management TUI (releases)
 
-[![Nieuwste release](https://img.shields.io/github/v/release/aalhabeeb/dmtui-releases?label=nieuwste%20versie&color=2ea043&sort=semver)](https://github.com/aalhabeeb/dmtui-releases/releases/latest)
-[![Downloads](https://img.shields.io/github/downloads/aalhabeeb/dmtui-releases/total?label=downloads&color=1f6feb)](https://github.com/aalhabeeb/dmtui-releases/releases)
-[![Licentie: MIT](https://img.shields.io/badge/licentie-MIT-blue)](https://github.com/aalhabeeb/dmtui-releases/blob/main/LICENSE)
+[![Nieuwste release](https://img.shields.io/github/v/release/aalhabeeb/dmtui?label=nieuwste%20versie&color=2ea043&sort=semver)](https://github.com/aalhabeeb/dmtui/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/aalhabeeb/dmtui/total?label=downloads&color=1f6feb)](https://github.com/aalhabeeb/dmtui/releases)
+[![Licentie: MIT](https://img.shields.io/badge/licentie-MIT-blue)](https://github.com/aalhabeeb/dmtui/blob/main/LICENSE)
 
 Publieke **`.deb`** en **`.rpm`** packages voor **dmtui** (Disk Management TUI):
 een nmtui-achtige TUI voor opslagbeheer (partities, LVM PV/VG/LV, filesystems
@@ -12,15 +12,15 @@ formatteren en mounten) op **RHEL/Rocky/Alma** en **Ubuntu/Debian**.
 
 ## Downloads
 
-- Nieuwste versie: **[Releases → latest](https://github.com/aalhabeeb/dmtui-releases/releases/latest)**
-- Alle versies: **[Releases](https://github.com/aalhabeeb/dmtui-releases/releases)**
+- Nieuwste versie: **[Releases → latest](https://github.com/aalhabeeb/dmtui/releases/latest)**
+- Alle versies: **[Releases](https://github.com/aalhabeeb/dmtui/releases)**
 
 ## Installeren op Ubuntu / Debian (.deb)
 
 Automatisch de nieuwste versie ophalen en installeren:
 
 ```bash
-url=$(curl -s https://api.github.com/repos/aalhabeeb/dmtui-releases/releases/latest \
+url=$(curl -s https://api.github.com/repos/aalhabeeb/dmtui/releases/latest \
   | grep -o 'https://[^"]*_all\.deb')
 curl -L -o dmtui.deb "$url"
 sudo apt install ./dmtui.deb
@@ -28,7 +28,7 @@ sudo dmtui
 ```
 
 Of handmatig: download de `dmtui_*_all.deb` van de
-[nieuwste release](https://github.com/aalhabeeb/dmtui-releases/releases/latest) en:
+[nieuwste release](https://github.com/aalhabeeb/dmtui/releases/latest) en:
 
 ```bash
 sudo apt install ./dmtui_*_all.deb
@@ -43,7 +43,7 @@ sudo apt install ./dmtui_*_all.deb
 Automatisch de nieuwste versie ophalen en installeren:
 
 ```bash
-url=$(curl -s https://api.github.com/repos/aalhabeeb/dmtui-releases/releases/latest \
+url=$(curl -s https://api.github.com/repos/aalhabeeb/dmtui/releases/latest \
   | grep -o 'https://[^"]*\.noarch\.rpm')
 curl -L -o dmtui.rpm "$url"
 sudo dnf install ./dmtui.rpm
@@ -51,7 +51,7 @@ sudo dmtui
 ```
 
 Of handmatig: download de `dmtui-*.noarch.rpm` van de
-[nieuwste release](https://github.com/aalhabeeb/dmtui-releases/releases/latest) en:
+[nieuwste release](https://github.com/aalhabeeb/dmtui/releases/latest) en:
 
 ```bash
 sudo dnf install ./dmtui-*.noarch.rpm
