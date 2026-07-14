@@ -1,13 +1,13 @@
 # dmtui — Disk Management TUI
 
-Een **nmtui-achtige TUI voor opslagbeheer** op Linux. Werkt op zowel
-**RHEL/Rocky/AlmaLinux** (dnf/yum) als **Ubuntu/Debian** (apt).
+**dmtui** is een terminalgebaseerde beheertool voor opslag op Linux. Het biedt een
+overzichtelijke interface voor het partitioneren van schijven, het beheren van LVM
+(Physical Volumes, Volume Groups en Logical Volumes) en het formatteren en mounten
+van bestandssystemen — met een preview en bevestiging van elke bewerking.
 
-In plaats van losse commando's als `parted`, `pvcreate`, `vgcreate`, `lvcreate`
-en `mkfs` uit je hoofd te typen, biedt dmtui een menugestuurde interface
-(gebaseerd op `dialog`, met **muisondersteuning** en een kleurthema) met
-bevestigingen en een preview van elk commando
-voordat het wordt uitgevoerd.
+Ondersteunde platformen: **RHEL, Rocky Linux, AlmaLinux** (dnf/yum) en
+**Ubuntu / Debian** (apt). De interface is gebaseerd op `dialog`, met muis- en
+toetsenbordbediening en een kleurthema.
 
 ## Functies
 
