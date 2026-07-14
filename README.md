@@ -19,11 +19,14 @@ Ondersteunde platformen: **RHEL, Rocky Linux, AlmaLinux** en **Ubuntu / Debian**
 ### Hoofdmenu
 ![dmtui — hoofdmenu](docs/menu.png)
 
-### Wizard — nieuwe schijf in gebruik nemen
-![dmtui — wizard](docs/wizard.png)
+### Nieuwe schijf in gebruik nemen
+![dmtui — schijf kiezen](docs/new_disk.png)
 
-### Opslag-layout
-![dmtui — layout](docs/layout.png)
+### Volume aanmaken
+![dmtui — volume](docs/volume.png)
+
+### Uitvoering en bevestiging
+![dmtui — uitvoering](docs/Uitvoering.png)
 
 ## Functionaliteit
 
