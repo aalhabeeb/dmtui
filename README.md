@@ -14,6 +14,17 @@ Ondersteunde platformen: **RHEL, Rocky Linux, AlmaLinux** en **Ubuntu / Debian**
 > Deze repository bevat de publieke **`.deb`**- en **`.rpm`**-packages.
 > De broncode wordt privé beheerd.
 
+## Schermafbeeldingen
+
+### Hoofdmenu
+![dmtui — hoofdmenu](docs/menu.png)
+
+### Wizard — nieuwe schijf in gebruik nemen
+![dmtui — wizard](docs/wizard.png)
+
+### Opslag-layout
+![dmtui — layout](docs/layout.png)
+
 ## Functionaliteit
 
 - Schijven partitioneren met partitietype **8e (Linux LVM)**.
