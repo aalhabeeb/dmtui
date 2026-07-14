@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# build.sh - Bouwt .deb en .rpm packages voor SMUI met nfpm.
+# build.sh - Bouwt .deb en .rpm packages voor dmtui met nfpm.
 #
 # nfpm (https://nfpm.goreleaser.com) genereert uit één config beide formaten,
 # zonder Debian- of RPM-buildtoolchain. Als nfpm niet in PATH staat, wordt een
@@ -24,11 +24,11 @@ CONFIG="packaging/nfpm.yaml"
 OUT_DIR="dist"
 BIN_DIR="bin"
 
-# Versie uit smui.sh halen zodat pakket en script gelijk lopen.
-SMUI_VERSION="$(grep -oP 'SMUI_VERSION="\K[^"]+' smui.sh | head -n1)"
-[[ -z "${SMUI_VERSION:-}" ]] && { echo "Kon SMUI_VERSION niet uit smui.sh lezen." >&2; exit 1; }
-export SMUI_VERSION
-echo "==> SMUI versie: ${SMUI_VERSION}"
+# Versie uit dmtui.sh halen zodat pakket en script gelijk lopen.
+DMTUI_VERSION="$(grep -oP 'DMTUI_VERSION="\K[^"]+' dmtui.sh | head -n1)"
+[[ -z "${DMTUI_VERSION:-}" ]] && { echo "Kon DMTUI_VERSION niet uit dmtui.sh lezen." >&2; exit 1; }
+export DMTUI_VERSION
+echo "==> dmtui versie: ${DMTUI_VERSION}"
 
 # --- nfpm beschikbaar maken -------------------------------------------------
 find_nfpm() {

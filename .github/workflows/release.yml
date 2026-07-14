@@ -27,7 +27,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y shellcheck
-          shellcheck smui.sh packaging/build.sh
+          shellcheck dmtui.sh packaging/build.sh
 
   build:
     name: Build packages
@@ -39,11 +39,11 @@ jobs:
       - name: Versie-consistentie controleren (bij tag)
         if: startsWith(github.ref, 'refs/tags/v')
         run: |
-          script_ver="$(grep -oP 'SMUI_VERSION="\K[^"]+' smui.sh | head -n1)"
+          script_ver="$(grep -oP 'DMTUI_VERSION="\K[^"]+' dmtui.sh | head -n1)"
           tag_ver="${GITHUB_REF_NAME#v}"
           echo "Script: ${script_ver} | Tag: ${tag_ver}"
           if [[ "$script_ver" != "$tag_ver" ]]; then
-            echo "::error::Tag (${tag_ver}) komt niet overeen met SMUI_VERSION (${script_ver}) in smui.sh"
+            echo "::error::Tag (${tag_ver}) komt niet overeen met DMTUI_VERSION (${script_ver}) in dmtui.sh"
             exit 1
           fi
 
@@ -55,7 +55,7 @@ jobs:
       - name: Artefacten uploaden
         uses: actions/upload-artifact@v4
         with:
-          name: smui-packages
+          name: dmtui-packages
           path: dist/*
           if-no-files-found: error
 
@@ -67,13 +67,13 @@ jobs:
           repository: aalhabeeb/SMUI-releases
           token: ${{ secrets.RELEASES_TOKEN }}
           tag_name: ${{ github.ref_name }}
-          name: SMUI ${{ github.ref_name }}
+          name: dmtui ${{ github.ref_name }}
           body: |
-            SMUI ${{ github.ref_name }} — packages voor Debian/Ubuntu (.deb) en RHEL/Rocky/Alma (.rpm).
+            dmtui ${{ github.ref_name }} — packages voor Debian/Ubuntu (.deb) en RHEL/Rocky/Alma (.rpm).
 
             Installatie:
-              Debian/Ubuntu : sudo apt install ./smui_*_all.deb
-              RHEL/Rocky/Alma: sudo dnf install ./smui-*.noarch.rpm
+              Debian/Ubuntu : sudo apt install ./dmtui_*_all.deb
+              RHEL/Rocky/Alma: sudo dnf install ./dmtui-*.noarch.rpm
 
             De broncode wordt privé beheerd; hier vind je alleen de gebouwde packages.
           files: |

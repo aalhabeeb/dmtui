@@ -1,13 +1,13 @@
-.TH SMUI 1 "2026" "SMUI 1.0.0" "Storage Management UI"
+.TH DMTUI 1 "2026" "dmtui" "Disk Management TUI"
 .SH NAME
-smui \- nmtui-achtige TUI voor opslagbeheer (partities, LVM, filesystems)
+dmtui \- nmtui-achtige TUI voor opslagbeheer (partities, LVM, filesystems)
 .SH SYNOPSIS
-.B smui
+.B dmtui
 .RI [ optie ]
 .SH DESCRIPTION
-.B SMUI
-(Storage Management UI) is een menugestuurde terminalinterface, gebaseerd op
-.BR whiptail (1),
+.B dmtui
+(Disk Management TUI) is een menugestuurde terminalinterface, gebaseerd op
+.BR dialog (1),
 voor het beheren van opslag op RHEL/Rocky/Alma en Ubuntu/Debian.
 Het biedt de volledige keten: een extra disk kiezen, een partitie van type
 .B 8e
@@ -25,15 +25,15 @@ Toon de ingebouwde hulp.
 .BR \-v ", " \-\-version
 Toon de versie.
 .SH GEBRUIK
-.B smui
+.B dmtui
 moet als root draaien:
 .PP
 .RS
-.B sudo smui
+.B sudo dmtui
 .RE
 .SH BESTANDEN
 .TP
-.I /usr/bin/smui
+.I /usr/bin/dmtui
 Het uitvoerbare script.
 .TP
 .I /etc/fstab

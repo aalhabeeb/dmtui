@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# SMUI - Storage Management UI
+# dmtui - Disk Management TUI
 # Een nmtui-achtige TUI voor opslagbeheer op RHEL/Rocky/Alma en Ubuntu/Debian.
 #
 # Functies:
@@ -14,7 +14,7 @@
 # Backend-tools zijn distro-onafhankelijk (util-linux, parted, lvm2).
 # Alleen het installeren van dependencies verschilt per distro.
 #
-# Gebruik: sudo ./smui.sh
+# Gebruik: sudo ./dmtui.sh
 #
 
 set -euo pipefail
@@ -22,10 +22,10 @@ set -euo pipefail
 # ---------------------------------------------------------------------------
 # Constantes / globale variabelen
 # ---------------------------------------------------------------------------
-SMUI_VERSION="1.5.1"
-APP_TITLE="SMUI - Storage Management UI v${SMUI_VERSION}"
+DMTUI_VERSION="2.0.0"
+APP_TITLE="dmtui - Disk Management TUI v${DMTUI_VERSION}"
 # Vaste kopbalk boven elk venster (moderne look).
-BACKTITLE="SMUI - Storage Management UI v${SMUI_VERSION}   |   muis + pijltjestoetsen"
+BACKTITLE="dmtui - Disk Management TUI v${DMTUI_VERSION}   |   muis + pijltjestoetsen"
 PKG_MGR=""          # dnf | yum | apt-get
 DISTRO_ID=""        # rhel | ubuntu | debian | ...
 ROOT_DISK=""        # disk die de root-mount bevat (beschermd)
@@ -113,11 +113,11 @@ ensure_deps() {
 # opnieuw probeert als het niet beschikbaar is (bijv. RHEL zonder EPEL).
 ensure_fzf_optional() {
     command -v fzf >/dev/null 2>&1 && return 0
-    [[ "${SMUI_NO_FZF:-0}" == "1" ]] && return 0
+    [[ "${DMTUI_NO_FZF:-0}" == "1" ]] && return 0
 
-    local marker="/var/lib/smui/.fzf-attempted"
+    local marker="/var/lib/dmtui/.fzf-attempted"
     [[ -f "$marker" ]] && return 0
-    mkdir -p /var/lib/smui 2>/dev/null || true
+    mkdir -p /var/lib/dmtui 2>/dev/null || true
 
     echo "Optioneel: fzf installeren voor filterbare lijsten (eenmalige poging, niet vereist)..."
     if [[ "$PKG_MGR" == "apt-get" ]]; then
@@ -169,8 +169,8 @@ compute_dialog_size() {
     LIST_H=$(( DLG_H - 12 ))
     if (( LIST_H < 3 )); then LIST_H=3; fi
 
-    if [[ "${SMUI_DEBUG:-0}" == "1" ]]; then
-        echo "SMUI_DEBUG: term=${lines}x${cols}  box=${DLG_H}x${DLG_W}  list=${LIST_H}" >&2
+    if [[ "${DMTUI_DEBUG:-0}" == "1" ]]; then
+        echo "DMTUI_DEBUG: term=${lines}x${cols}  box=${DLG_H}x${DLG_W}  list=${LIST_H}" >&2
     fi
 }
 
@@ -254,7 +254,7 @@ RC
 
 # Is fzf beschikbaar? (optioneel; geeft typen-om-te-filteren + muis in lijsten)
 have_fzf() {
-    [[ "${SMUI_NO_FZF:-0}" != "1" ]] && command -v fzf >/dev/null 2>&1
+    [[ "${DMTUI_NO_FZF:-0}" != "1" ]] && command -v fzf >/dev/null 2>&1
 }
 
 # Toont een keuzelijst en geeft de gekozen 'tag' terug.
@@ -446,7 +446,7 @@ select_pv() {
 guard_system_disk() {
     local dev="$1"
     if [[ -n "$ROOT_DISK" && "$dev" == "$ROOT_DISK"* ]]; then
-        msg_box "GEWEIGERD: $dev hoort bij de systeemdisk ($ROOT_DISK).\nSMUI voert hierop geen destructieve bewerkingen uit."
+        msg_box "GEWEIGERD: $dev hoort bij de systeemdisk ($ROOT_DISK).\ndmtui voert hierop geen destructieve bewerkingen uit."
         return 1
     fi
     return 0
@@ -914,7 +914,7 @@ main_menu() {
         esac
     done
     clear
-    echo "SMUI afgesloten."
+    echo "dmtui afgesloten."
 }
 
 # ---------------------------------------------------------------------------
@@ -922,13 +922,13 @@ main_menu() {
 # ---------------------------------------------------------------------------
 usage() {
     cat <<EOF
-SMUI - Storage Management UI v${SMUI_VERSION}
+dmtui - Disk Management TUI v${DMTUI_VERSION}
 
 Een nmtui-achtige TUI voor opslagbeheer (partities, LVM, filesystems) op
 RHEL/Rocky/Alma en Ubuntu/Debian.
 
 Gebruik:
-  smui [optie]
+  dmtui [optie]
 
 Opties:
   (geen)          Start de interactieve TUI (vereist root).
@@ -936,14 +936,14 @@ Opties:
   -v, --version   Toon de versie.
 
 Voorbeeld:
-  sudo smui
+  sudo dmtui
 EOF
 }
 
 main() {
     case "${1:-}" in
         -h|--help)    usage; exit 0 ;;
-        -v|--version) echo "smui ${SMUI_VERSION}"; exit 0 ;;
+        -v|--version) echo "dmtui ${DMTUI_VERSION}"; exit 0 ;;
         "" )          ;;
         * )           echo "Onbekende optie: $1" >&2; usage; exit 2 ;;
     esac

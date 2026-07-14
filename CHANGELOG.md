@@ -1,11 +1,21 @@
 # Changelog
 
-Alle noemenswaardige wijzigingen aan SMUI worden in dit bestand bijgehouden.
+Alle noemenswaardige wijzigingen aan dmtui worden in dit bestand bijgehouden.
 
 Het formaat is gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.1.0/)
 en dit project volgt [Semantic Versioning](https://semver.org/lang/nl/).
 
 ## [Unreleased]
+
+## [2.0.0] - 2026-07-14
+
+### Gewijzigd (breaking)
+- **Hernoemd van SMUI naar `dmtui` (Disk Management TUI).** Het commando heet nu
+  `dmtui` (voorheen `smui`), het pakket heet `dmtui`, en de bestanden zijn
+  `dmtui.sh` / `dmtui.1`. Omgevingsvariabelen heten nu `DMTUI_DEBUG` en
+  `DMTUI_NO_FZF` (voorheen `SMUI_*`). Wie de oude `smui` had geïnstalleerd kan die
+  verwijderen (`sudo apt remove smui` / `sudo dnf remove smui`) en `dmtui`
+  installeren.
 
 ## [1.5.1] - 2026-07-12
 
@@ -154,7 +164,8 @@ en dit project volgt [Semantic Versioning](https://semver.org/lang/nl/).
 - GitHub Actions-workflow voor lint, build en release
   (`.github/workflows/release.yml`).
 
-[Unreleased]: https://github.com/aalhabeeb/SMUI/compare/v1.5.1...HEAD
+[Unreleased]: https://github.com/aalhabeeb/SMUI/compare/v2.0.0...HEAD
+[2.0.0]: https://github.com/aalhabeeb/SMUI/releases/tag/v2.0.0
 [1.5.1]: https://github.com/aalhabeeb/SMUI/releases/tag/v1.5.1
 [1.5.0]: https://github.com/aalhabeeb/SMUI/releases/tag/v1.5.0
 [1.4.4]: https://github.com/aalhabeeb/SMUI/releases/tag/v1.4.4

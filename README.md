@@ -1,10 +1,10 @@
-# SMUI — Storage Management UI
+# dmtui — Disk Management TUI
 
 Een **nmtui-achtige TUI voor opslagbeheer** op Linux. Werkt op zowel
 **RHEL/Rocky/AlmaLinux** (dnf/yum) als **Ubuntu/Debian** (apt).
 
 In plaats van losse commando's als `parted`, `pvcreate`, `vgcreate`, `lvcreate`
-en `mkfs` uit je hoofd te typen, biedt SMUI een menugestuurde interface
+en `mkfs` uit je hoofd te typen, biedt dmtui een menugestuurde interface
 (gebaseerd op `dialog`, met **muisondersteuning** en een kleurthema) met
 bevestigingen en een preview van elk commando
 voordat het wordt uitgevoerd.
@@ -47,8 +47,8 @@ De volgende pakketten worden automatisch geïnstalleerd als ze ontbreken:
 
 ### Optioneel: `fzf` (aanrader)
 
-Als **`fzf`** geïnstalleerd is, gebruikt SMUI dat voor de disk-/VG-/LV-lijsten:
-**typen om te filteren**, muis-klik en scrollen. Ontbreekt `fzf`, dan valt SMUI
+Als **`fzf`** geïnstalleerd is, gebruikt dmtui dat voor de disk-/VG-/LV-lijsten:
+**typen om te filteren**, muis-klik en scrollen. Ontbreekt `fzf`, dan valt dmtui
 automatisch terug op het gewone `dialog`-menu.
 
 ```bash
@@ -57,26 +57,26 @@ sudo dnf install fzf        # RHEL/Rocky/Alma (via EPEL)
 ```
 
 Het `.deb`-pakket adviseert `fzf` automatisch (Recommends). Wil je `fzf` tijdelijk
-uitschakelen: start met `SMUI_NO_FZF=1 sudo smui`.
+uitschakelen: start met `DMTUI_NO_FZF=1 sudo dmtui`.
 
 ## Gebruik
 
 ```bash
-git clone https://github.com/aalhabeeb/SMUI.git smui
-cd smui
-chmod +x smui.sh
-sudo ./smui.sh
+git clone https://github.com/aalhabeeb/SMUI.git dmtui
+cd dmtui
+chmod +x dmtui.sh
+sudo ./dmtui.sh
 ```
 
 Of in één keer draaien vanuit de checkout:
 
 ```bash
-sudo bash smui.sh
+sudo bash dmtui.sh
 ```
 
 ## Installeren als pakket (.deb / .rpm)
 
-SMUI kan als los pakket geïnstalleerd worden. De packages worden gebouwd met
+dmtui kan als los pakket geïnstalleerd worden. De packages worden gebouwd met
 [nfpm](https://nfpm.goreleaser.com) — één config levert zowel `.deb` als `.rpm`.
 
 Bouwen (op een Linux-host):
@@ -88,30 +88,30 @@ Bouwen (op een Linux-host):
 ```
 
 Staat `nfpm` niet in `PATH`, dan downloadt het script automatisch een gepinde
-versie naar `./bin`. Resultaat in `./dist/` (waarbij `<versie>` = `SMUI_VERSION`
-uit `smui.sh`):
+versie naar `./bin`. Resultaat in `./dist/` (waarbij `<versie>` = `DMTUI_VERSION`
+uit `dmtui.sh`):
 
 ```text
-dist/smui_<versie>_all.deb
-dist/smui-<versie>-1.noarch.rpm
+dist/dmtui_<versie>_all.deb
+dist/dmtui-<versie>-1.noarch.rpm
 ```
 
 Installeren (de glob pakt automatisch de nieuwste gebouwde versie):
 
 ```bash
 # Debian/Ubuntu
-sudo apt install ./dist/smui_*_all.deb
+sudo apt install ./dist/dmtui_*_all.deb
 
 # RHEL/Rocky/Alma
-sudo dnf install ./dist/smui-*.noarch.rpm
+sudo dnf install ./dist/dmtui-*.noarch.rpm
 ```
 
-Het pakket installeert `smui` naar `/usr/bin/smui`, een manpage naar
-`man 1 smui`, en declareert de runtime-afhankelijkheden (`lvm2`, `parted`,
+Het pakket installeert `dmtui` naar `/usr/bin/dmtui`, een manpage naar
+`man 1 dmtui`, en declareert de runtime-afhankelijkheden (`lvm2`, `parted`,
 `util-linux`, en `dialog`). Daarna starten met:
 
 ```bash
-sudo smui
+sudo dmtui
 ```
 
 ## Releases (CI/CD)
@@ -122,13 +122,13 @@ de packages automatisch met GitHub Actions:
 - **Push naar `main` / pull request** → lint (`shellcheck`) + testbuild.
 - **Push van een tag `v*`** → build **en** publiceert een Release met de
   `.deb` en `.rpm` in de **publieke releases-repo** (broncode blijft privé).
-  De tag moet overeenkomen met `SMUI_VERSION` in `smui.sh` (anders faalt de build).
+  De tag moet overeenkomen met `DMTUI_VERSION` in `dmtui.sh` (anders faalt de build).
 - **Handmatige run** (workflow_dispatch) → build + upload als artefact.
 
 Een release maken (vervang `X.Y.Z` door het nieuwe versienummer):
 
 ```bash
-# 1. Bump de versie in smui.sh (SMUI_VERSION="X.Y.Z")
+# 1. Bump de versie in dmtui.sh (DMTUI_VERSION="X.Y.Z")
 # 2. Commit en tag
 git commit -am "release: vX.Y.Z"
 git tag vX.Y.Z

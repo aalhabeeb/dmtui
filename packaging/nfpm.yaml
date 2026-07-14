@@ -1,12 +1,12 @@
-# nfpm-config voor SMUI — bouwt zowel .deb als .rpm uit één definitie.
+# nfpm-config voor dmtui — bouwt zowel .deb als .rpm uit één definitie.
 # Docs: https://nfpm.goreleaser.com/configuration/
 #
 # Bouwen:  ./packaging/build.sh   (of handmatig: nfpm pkg -f packaging/nfpm.yaml -p deb -t dist/)
 
-name: "smui"
+name: "dmtui"
 arch: "all"            # architectuur-onafhankelijk (deb: all, rpm: noarch)
 platform: "linux"
-version: "${SMUI_VERSION}"
+version: "${DMTUI_VERSION}"
 section: "admin"
 priority: "optional"
 maintainer: "lean-it.nl <info@lean-it.nl>"
@@ -14,35 +14,35 @@ vendor: "lean-it.nl"
 homepage: "https://lean-it.nl"
 license: "MIT"
 description: |
-  SMUI - Storage Management UI.
+  dmtui - Disk Management TUI.
   Een nmtui-achtige TUI voor opslagbeheer (partities, LVM PV/VG/LV,
   filesystems formatteren en mounten) op RHEL/Rocky/Alma en Ubuntu/Debian.
 
 contents:
-  - src: ./smui.sh
-    dst: /usr/bin/smui
+  - src: ./dmtui.sh
+    dst: /usr/bin/dmtui
     file_info:
       mode: 0755
-  - src: ./packaging/smui.1
-    dst: /usr/share/man/man1/smui.1
+  - src: ./packaging/dmtui.1
+    dst: /usr/share/man/man1/dmtui.1
     file_info:
       mode: 0644
   - src: ./README.md
-    dst: /usr/share/doc/smui/README.md
+    dst: /usr/share/doc/dmtui/README.md
     file_info:
       mode: 0644
   - src: ./CHANGELOG.md
-    dst: /usr/share/doc/smui/CHANGELOG.md
+    dst: /usr/share/doc/dmtui/CHANGELOG.md
     file_info:
       mode: 0644
   - src: ./LICENSE
-    dst: /usr/share/doc/smui/LICENSE
+    dst: /usr/share/doc/dmtui/LICENSE
     file_info:
       mode: 0644
 
 # Runtime-afhankelijkheden. 'dialog' heet op alle distro's gewoon 'dialog'.
 # 'fzf' is optioneel (typen-om-te-filteren + muis in lijsten); als het ontbreekt
-# valt SMUI automatisch terug op het dialog-menu.
+# valt dmtui automatisch terug op het dialog-menu.
 overrides:
   deb:
     depends:
