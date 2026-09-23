@@ -1,0 +1,48 @@
+.TH DMTUI 1 "2026" "dmtui" "Disk Management TUI"
+.SH NAME
+dmtui \- nmtui-achtige TUI voor opslagbeheer (partities, LVM, filesystems)
+.SH SYNOPSIS
+.B dmtui
+.RI [ optie ]
+.SH DESCRIPTION
+.B dmtui
+(Disk Management TUI) is een menugestuurde terminalinterface, gebaseerd op
+.BR dialog (1),
+voor het beheren van opslag op RHEL/Rocky/Alma en Ubuntu/Debian.
+Het biedt de volledige keten: een extra disk kiezen, een partitie van type
+.B 8e
+(Linux LVM) aanmaken, Physical Volumes, Volume Groups en Logical Volumes
+beheren, filesystems formatteren en persistent mounten via
+.BR fstab (5).
+.PP
+Destructieve bewerkingen tonen eerst een preview en vragen om bevestiging.
+De disk die de root-mount bevat wordt gedetecteerd en beschermd.
+.SH OPTIES
+.TP
+.BR \-h ", " \-\-help
+Toon de ingebouwde hulp.
+.TP
+.BR \-v ", " \-\-version
+Toon de versie.
+.SH GEBRUIK
+.B dmtui
+moet als root draaien:
+.PP
+.RS
+.B sudo dmtui
+.RE
+.SH BESTANDEN
+.TP
+.I /usr/bin/dmtui
+Het uitvoerbare script.
+.TP
+.I /etc/fstab
+Wordt bijgewerkt bij het mounten van nieuwe filesystems.
+.SH ZIE OOK
+.BR lvm (8),
+.BR parted (8),
+.BR pvcreate (8),
+.BR vgcreate (8),
+.BR lvcreate (8),
+.BR mkfs (8),
+.BR lsblk (8)
