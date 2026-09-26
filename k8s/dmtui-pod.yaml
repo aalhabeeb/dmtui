@@ -1,0 +1,42 @@
+# dmtui als losse pod op één node — alternatief voor `kubectl debug node`.
+#
+#   1. Vul hieronder nodeName in.
+#   2. kubectl apply -f k8s/dmtui-pod.yaml
+#   3. kubectl -n kube-system exec -it dmtui -- dmtui
+#   4. kubectl -n kube-system delete pod dmtui      # na afloop opruimen
+#
+# kube-system is op Talos standaard vrijgesteld van Pod Security (baseline);
+# in een andere namespace heb je het label
+# pod-security.kubernetes.io/enforce=privileged nodig.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: dmtui
+  namespace: kube-system
+  labels:
+    app.kubernetes.io/name: dmtui
+spec:
+  nodeName: talos-lab01          # <-- de node waarop je de disk wilt beheren
+  hostPID: true                  # host-mounts herkennen (/proc/1/mountinfo)
+  hostNetwork: true              # hostname = nodenaam in de TUI
+  restartPolicy: Never
+  tolerations:
+    - operator: Exists
+  containers:
+    - name: dmtui
+      image: ghcr.io/aalhabeeb/dmtui:latest
+      command: ["sleep", "infinity"]
+      stdin: true
+      tty: true
+      securityContext:
+        privileged: true
+      volumeMounts:
+        # Hele /dev van de host: ook disks die na de start van de pod
+        # zijn toegevoegd worden dan zichtbaar.
+        - name: dev
+          mountPath: /dev
+  volumes:
+    - name: dev
+      hostPath:
+        path: /dev
+        type: Directory

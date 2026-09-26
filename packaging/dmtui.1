@@ -24,6 +24,20 @@ Toon de ingebouwde hulp.
 .TP
 .BR \-v ", " \-\-version
 Toon de versie.
+.SH OMGEVING
+.TP
+.B DMTUI_MODE
+.BR host ", " k8s " of " auto
+(standaard). In
+.B k8s
+draait dmtui als privileged pod op een Kubernetes-node (bijv. Talos) en
+beperkt het zich tot Physical Volumes en Volume Groups voor TopoLVM.
+.TP
+.B DMTUI_NO_FZF=1
+Gebruik geen fzf voor lijsten.
+.TP
+.B DMTUI_DEBUG=1
+Toon debug-uitvoer.
 .SH GEBRUIK
 .B dmtui
 moet als root draaien:
