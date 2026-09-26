@@ -7,7 +7,32 @@ en dit project volgt [Semantic Versioning](https://semver.org/lang/nl/).
 
 ## [Unreleased]
 
+Versie in `dmtui.sh` staat op **2.1.0**.
+
+### Toegevoegd
+- **k8s-modus (`DMTUI_MODE=k8s`)** om dmtui als privileged pod op een
+  Kubernetes-node te draaien, met name **Talos** (geen shell, geen package manager).
+  De modus is gericht op **TopoLVM**: alleen PV + VG (hele disk, geen partitie),
+  geen LV's, filesystems of fstab. Hij schakelt automatisch in binnen een pod
+  (`DMTUI_MODE=auto`).
+- **Container-image** `ghcr.io/aalhabeeb/dmtui` (Debian 13-slim) met een
+  LVM-config voor containers (geen udev/dmeventd/devices-file). CI pusht `:edge`
+  vanaf `main` en `:X.Y.Z`, `:X.Y` en `:latest` bij een tag.
+- **`k8s/dmtui-pod.yaml`** als alternatief voor `kubectl debug node`.
+- **Nieuwe actie: "Disk vergroot? PV laten meegroeien"** (host: menu `g`, k8s:
+  optie 3). Laat de kernel de disk opnieuw inlezen, vergroot de partitie met
+  `growpart` (als het PV op een partitie staat) en draait `pvresize`. Op een host
+  wordt `growpart` (`cloud-guest-utils` / `cloud-utils-growpart`) aangeboden als
+  het ontbreekt.
+- **TopoLVM-config tonen**: de Helm-values (`lvmd.deviceClasses`) voor een VG.
+
 ### Gewijzigd
+- **Bescherming van disks** werkt nu met een lijst in plaats van alleen de
+  root-disk en kijkt naar de onderliggende disk(s) van een apparaat. Voorheen was het een
+  prefix-vergelijking, waardoor `/dev/sda` ook `/dev/sdaa` blokkeerde. In k8s-modus
+  zijn ook Talos-partities en host-mounts beschermd.
+- **Volume Group verwijderen** weigert nu een VG die nog Logical Volumes bevat
+  (voorheen nam `vgremove -y` die mee).
 - **Broncode is nu publiek.** De privé-repo `SMUI` is (met volledige geschiedenis)
   samengevoegd in `aalhabeeb/dmtui`; broncode, packaging en releases staan nu in
   één repo. De release-workflow publiceert naar deze repo met de standaard

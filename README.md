@@ -110,6 +110,65 @@ Later uitbreiden met een tweede disk:
 1. **Partitie aanmaken (8e)** op de nieuwe disk → **VG uitbreiden** (`vgextend`).
 2. **LV uitbreiden** met `+100%FREE` en filesystem laten meegroeien.
 
+Of de bestaande disk vergroten (bijv. `qm resize` in Proxmox):
+
+1. **Disk vergroot? PV laten meegroeien** (menu-optie `g`) → dmtui laat de kernel
+   de disk opnieuw inlezen, vergroot de partitie met `growpart` en draait `pvresize`.
+2. **LV uitbreiden** met `+100%FREE`.
+
+## Als pod op Kubernetes / Talos (TopoLVM)
+
+Op een node zonder shell of package manager, zoals **Talos**, draait dmtui als
+privileged pod. Het image `ghcr.io/aalhabeeb/dmtui` start automatisch in
+**k8s-modus** (`DMTUI_MODE=k8s`). Die modus is bedoeld om een Volume Group
+klaar te zetten voor [TopoLVM](https://github.com/topolvm/topolvm) en die later te
+vergroten.
+
+```bash
+kubectl debug node/<node> -n kube-system -it --profile=sysadmin \
+  --image=ghcr.io/aalhabeeb/dmtui:latest
+# na afloop: kubectl -n kube-system delete pod <node-debugger-pod>
+```
+
+Of met het manifest [k8s/dmtui-pod.yaml](k8s/dmtui-pod.yaml) (vul eerst `nodeName` in):
+
+```bash
+kubectl apply -f k8s/dmtui-pod.yaml
+kubectl -n kube-system exec -it dmtui -- dmtui
+kubectl -n kube-system delete pod dmtui
+```
+
+Gebruik `kube-system`: die namespace is op Talos standaard vrijgesteld van Pod
+Security. Elders heb je het label `pod-security.kubernetes.io/enforce=privileged` nodig.
+
+**Wat de k8s-modus anders doet:**
+
+- **Alleen PV + VG.** TopoLVM maakt per PVC zelf een LV aan, formatteert en mount
+  het. Aanmaken of uitbreiden van LV's, formatteren en `fstab` zitten daarom niet in
+  het menu.
+- **Hele disk als PV** (`wipefs` → `pvcreate` → `vgcreate`/`vgextend`), zonder
+  partitie. Groeien is dan alleen rescan + `pvresize`.
+- **Strengere bescherming.** Disks met Talos-partities (`EFI`, `META`, `STATE`,
+  `EPHEMERAL`, `IMAGECACHE`, `u-*`) en alles wat de node zelf gemount heeft
+  (`/proc/1/mountinfo`, vereist `hostPID`) worden geweigerd.
+- **Een VG met LV's kan niet verwijderd worden.** Die LV's zijn PVC's.
+- **TopoLVM-config tonen** geeft de Helm-values (`lvmd.deviceClasses`) voor de
+  gekozen VG.
+
+**Later meer ruimte voor TopoLVM:**
+
+| Situatie | In dmtui (pod op die node) |
+|---|---|
+| Disk vergroot in de hypervisor | **Disk vergroot? PV laten meegroeien** |
+| Extra disk toegevoegd | **Wizard** → *Toevoegen aan bestaande Volume Group* |
+| Eén PVC groter maken | niet in dmtui: vergroot `spec.resources.requests.storage` van de PVC |
+
+TopoLVM ziet vrije ruimte in de VG vanzelf; er hoeft niets herstart te worden.
+
+> [!WARNING]
+> Maak VG-wijzigingen bij voorkeur als er geen PVC's worden aangemaakt. De
+> LVM-locking van de dmtui-pod wordt niet gedeeld met TopoLVM's `lvmd`.
+
 ## Vanaf de broncode draaien
 
 ```bash

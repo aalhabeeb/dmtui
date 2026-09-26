@@ -10,9 +10,17 @@
 #   * Filesystem formatteren + mounten (met fstab-entry op UUID)
 #   * Bestaande opslag-/LVM-layout tonen
 #   * Verwijderen van LV / VG / PV (met dubbele bevestiging)
+#   * PV laten meegroeien na het vergroten van een disk (rescan + growpart + pvresize)
 #
 # Backend-tools zijn distro-onafhankelijk (util-linux, parted, lvm2).
 # Alleen het installeren van dependencies verschilt per distro.
+#
+# Twee modi (DMTUI_MODE):
+#   * host - gewone Linux-host (standaard buiten Kubernetes)
+#   * k8s  - als privileged pod op een Kubernetes-node (bijv. Talos) om een
+#            Volume Group voor TopoLVM klaar te zetten en later te vergroten.
+#            Geen LV's, filesystems of fstab: dat doet TopoLVM zelf.
+#   * auto - (standaard) k8s als de pod-omgeving gedetecteerd wordt, anders host.
 #
 # Gebruik: sudo ./dmtui.sh
 #
@@ -22,14 +30,18 @@ set -euo pipefail
 # ---------------------------------------------------------------------------
 # Constantes / globale variabelen
 # ---------------------------------------------------------------------------
-DMTUI_VERSION="2.0.0"
+DMTUI_VERSION="2.1.0"
 APP_TITLE="dmtui - Disk Management TUI v${DMTUI_VERSION}"
 # Vaste kopbalk boven elk venster (moderne look).
 BACKTITLE="dmtui - Disk Management TUI v${DMTUI_VERSION}   |   muis + pijltjestoetsen"
 PKG_MGR=""          # dnf | yum | apt-get
 DISTRO_ID=""        # rhel | ubuntu | debian | ...
-ROOT_DISK=""        # disk die de root-mount bevat (beschermd)
+PROTECTED_DISKS=()  # disks die nooit gewist mogen worden (root, Talos, host-mounts)
 DIALOGRC_TMP=""     # tijdelijk themabestand voor dialog (kleurthema)
+DMTUI_MODE="${DMTUI_MODE:-auto}"   # host | k8s | auto (zie detect_mode)
+
+# GPT-partitienamen die Talos zelf beheert; disks met zo'n partitie zijn tabu.
+TALOS_PARTLABELS_RE='^(EFI|BIOS|BOOT|META|STATE|EPHEMERAL|IMAGECACHE|u-.+)$'
 
 # Dialooggroottes (worden aangepast aan de terminal in compute_dialog_size).
 DLG_H=20            # hoogte voor vensters/menu's
@@ -79,8 +91,17 @@ ensure_deps() {
     command -v parted   >/dev/null 2>&1 || missing+=("parted")
     command -v lsblk    >/dev/null 2>&1 || missing+=("util-linux")
     command -v blkid    >/dev/null 2>&1 || missing+=("util-linux")
+    if is_k8s; then
+        command -v wipefs   >/dev/null 2>&1 || missing+=("util-linux")
+        command -v growpart >/dev/null 2>&1 || missing+=("cloud-guest-utils")
+    fi
 
     [[ ${#missing[@]} -eq 0 ]] && return 0
+
+    # In een pod installeren we niets: het image hoort compleet te zijn.
+    if is_k8s; then
+        die "Het container-image mist: ${missing[*]}. Bouw het image opnieuw (zie Dockerfile)."
+    fi
 
     echo "De volgende afhankelijkheden ontbreken en worden geïnstalleerd: ${missing[*]}"
 
@@ -114,6 +135,7 @@ ensure_deps() {
 ensure_fzf_optional() {
     command -v fzf >/dev/null 2>&1 && return 0
     [[ "${DMTUI_NO_FZF:-0}" == "1" ]] && return 0
+    is_k8s && return 0
 
     local marker="/var/lib/dmtui/.fzf-attempted"
     [[ -f "$marker" ]] && return 0
@@ -128,16 +150,75 @@ ensure_fzf_optional() {
     : >"$marker" 2>/dev/null || true
 }
 
-# Bepaal welke fysieke disk de root-mount (/) bevat, zodat we die beschermen.
-detect_root_disk() {
-    local root_src part
-    root_src=$(findmnt -no SOURCE / 2>/dev/null || true)
-    if [[ -n "$root_src" ]]; then
-        # Volg door tot de onderliggende disk (pkname van de bron).
-        part=$(lsblk -no PKNAME "$root_src" 2>/dev/null | head -n1 || true)
-        if [[ -n "$part" ]]; then
-            ROOT_DISK="/dev/${part}"
+# Bepaal de modus: host (gewone Linux-host) of k8s (privileged pod op een node).
+detect_mode() {
+    if [[ "$DMTUI_MODE" == "auto" ]]; then
+        if [[ -n "${KUBERNETES_SERVICE_HOST:-}" || -d /var/run/secrets/kubernetes.io ]]; then
+            DMTUI_MODE="k8s"
+        else
+            DMTUI_MODE="host"
         fi
+    fi
+    case "$DMTUI_MODE" in
+        host|k8s) ;;
+        *) die "Ongeldige DMTUI_MODE '${DMTUI_MODE}' (gebruik host, k8s of auto)." ;;
+    esac
+}
+
+is_k8s() {
+    [[ "$DMTUI_MODE" == "k8s" ]]
+}
+
+# Geeft de fysieke disk(s) onder een apparaat terug (partitie, LV, of de disk zelf).
+top_disks_of() {
+    lsblk -snro NAME,TYPE "$1" 2>/dev/null | awk '$2=="disk" || $2=="loop" {print "/dev/"$1}' | sort -u
+}
+
+# Markeer de disk(s) onder een apparaat als beschermd.
+protect_disks_of() {
+    local d p
+    while read -r d; do
+        [[ -z "$d" ]] && continue
+        for p in "${PROTECTED_DISKS[@]}"; do
+            [[ "$p" == "$d" ]] && continue 2
+        done
+        PROTECTED_DISKS+=("$d")
+    done < <(top_disks_of "$1")
+}
+
+is_protected_disk() {
+    local p
+    for p in "${PROTECTED_DISKS[@]}"; do
+        [[ "$p" == "$1" ]] && return 0
+    done
+    return 1
+}
+
+# Bepaal welke disks we beschermen:
+#   * de disk met de root-mount (/);
+#   * in k8s-modus ook disks met Talos-partities (EFI, META, STATE, EPHEMERAL, ...)
+#     en alles wat de host (PID 1) gemount heeft. In een container is / een
+#     overlay, dus de root-check alleen vindt daar niets.
+detect_protected_disks() {
+    local root_src
+    root_src=$(findmnt -no SOURCE / 2>/dev/null || true)
+    [[ -b "$root_src" ]] && protect_disks_of "$root_src"
+
+    is_k8s || return 0
+
+    local name type label
+    while read -r name type; do
+        [[ "$type" == "part" ]] || continue
+        label=$(blkid -p -s PART_ENTRY_NAME -o value "/dev/${name}" 2>/dev/null || true)
+        [[ "$label" =~ $TALOS_PARTLABELS_RE ]] && protect_disks_of "/dev/${name}"
+    done < <(lsblk -rno NAME,TYPE 2>/dev/null)
+
+    # Mounts van de host zelf (vereist hostPID; anders zijn dit die van de container).
+    local src
+    if [[ -r /proc/1/mountinfo ]]; then
+        while read -r src; do
+            [[ -b "$src" ]] && protect_disks_of "$src"
+        done < <(awk '{for (i = 1; i <= NF; i++) if ($i == "-") { print $(i + 2); break }}' /proc/1/mountinfo)
     fi
 }
 
@@ -341,8 +422,8 @@ part_name() {
 # in één oogopslag ziet welke disk nieuw/leeg is en welke in gebruik is.
 disk_status() {
     local disk="$1"
-    if [[ -n "$ROOT_DISK" && "$disk" == "$ROOT_DISK" ]]; then
-        echo "SYSTEEMDISK (beschermd)"; return
+    if is_protected_disk "$disk"; then
+        echo "SYSTEEMDISK / in gebruik (beschermd)"; return
     fi
     local nparts nmounts nlvm
     nparts=$(lsblk -rno TYPE "$disk" 2>/dev/null | grep -cx 'part' || true)
@@ -444,12 +525,20 @@ select_pv() {
 
 # Veiligheidscheck: weiger bewerkingen op de systeemdisk.
 guard_system_disk() {
-    local dev="$1"
-    if [[ -n "$ROOT_DISK" && "$dev" == "$ROOT_DISK"* ]]; then
-        msg_box "GEWEIGERD: $dev hoort bij de systeemdisk ($ROOT_DISK).\ndmtui voert hierop geen destructieve bewerkingen uit."
-        return 1
-    fi
+    local dev="$1" d
+    while read -r d; do
+        [[ -z "$d" ]] && continue
+        if is_protected_disk "$d"; then
+            msg_box "GEWEIGERD: $dev ligt op een beschermde disk ($d: systeemdisk of in gebruik).\ndmtui voert hierop geen destructieve bewerkingen uit."
+            return 1
+        fi
+    done < <(top_disks_of "$dev")
     return 0
+}
+
+# Geldige naam voor een VG (LVM staat letters, cijfers en _ . + - toe, geen - vooraan).
+valid_lvm_name() {
+    [[ "$1" =~ ^[A-Za-z0-9_.+][A-Za-z0-9_.+-]*$ ]]
 }
 
 # ---------------------------------------------------------------------------
@@ -597,6 +686,188 @@ action_extend_lv() {
 }
 
 # ---------------------------------------------------------------------------
+# Feature: PV laten meegroeien nadat de disk is vergroot (bijv. in Proxmox)
+# ---------------------------------------------------------------------------
+# Zorgt dat growpart er is (host-modus: optioneel installeren).
+ensure_growpart() {
+    command -v growpart >/dev/null 2>&1 && return 0
+    if is_k8s; then
+        msg_box "growpart ontbreekt in het container-image."
+        return 1
+    fi
+    local pkg="cloud-utils-growpart"
+    [[ "$PKG_MGR" == "apt-get" ]] && pkg="cloud-guest-utils"
+    if confirm_box "Om een partitie te vergroten is 'growpart' nodig (pakket ${pkg}).\nNu installeren?"; then
+        if [[ "$PKG_MGR" == "apt-get" ]]; then
+            DEBIAN_FRONTEND=noninteractive apt-get install -y "$pkg" >/dev/null 2>&1 || true
+        else
+            "$PKG_MGR" install -y "$pkg" >/dev/null 2>&1 || true
+        fi
+    fi
+    command -v growpart >/dev/null 2>&1 && return 0
+    msg_box "growpart is niet beschikbaar; de partitie kan niet vergroot worden."
+    return 1
+}
+
+action_grow_pv() {
+    local pv
+    pv=$(select_pv "Kies het Physical Volume waarvan de disk is vergroot:") || return 0
+    [[ -z "$pv" ]] && return 0
+
+    local type disk partnum=""
+    type=$(lsblk -dno TYPE "$pv" 2>/dev/null || true)
+    case "$type" in
+        disk|loop)
+            disk="$pv"
+            ;;
+        part)
+            disk="/dev/$(lsblk -no PKNAME "$pv" 2>/dev/null | head -n1)"
+            partnum=$(cat "/sys/class/block/$(basename "$pv")/partition" 2>/dev/null || true)
+            if [[ -z "$partnum" || "$disk" == "/dev/" ]]; then
+                msg_box "Kon de disk of het partitienummer van ${pv} niet bepalen."
+                return 0
+            fi
+            ensure_growpart || return 0
+            ;;
+        *)
+            msg_box "${pv} is van type '${type:-onbekend}'.\nAlleen PV's op een hele disk of een partitie kunnen hier meegroeien."
+            return 0
+            ;;
+    esac
+
+    local dname disk_size pv_size vg
+    dname="$(basename "$disk")"
+    disk_size=$(lsblk -dno SIZE "$disk" 2>/dev/null | tr -d ' ')
+    pv_size=$(pvs --noheadings -o pv_size "$pv" 2>/dev/null | tr -d ' ')
+    vg=$(pvs --noheadings -o vg_name "$pv" 2>/dev/null | tr -d ' ')
+
+    msg_box "PV laten meegroeien\n\n\
+  PV    : ${pv}  (nu ${pv_size:-?}, VG ${vg:-geen})\n\
+  Disk  : ${disk}  (kernel ziet nu ${disk_size:-?})\n\n\
+Vergroot eerst de disk in de hypervisor (bijv. Proxmox: qm resize).\n\
+dmtui laat de kernel de disk opnieuw inlezen$( [[ -n "$partnum" ]] && echo ", vergroot partitie ${partnum}" )\n\
+en daarna het PV. Gegevens blijven behouden."
+
+    local -a cmds=(
+        "if [ -w /sys/class/block/${dname}/device/rescan ]; then echo 1 > /sys/class/block/${dname}/device/rescan; fi"
+    )
+    # growpart geeft exitcode 1 bij NOCHANGE (partitie was al maximaal): geen fout.
+    [[ -n "$partnum" ]] && cmds+=("growpart ${disk} ${partnum} || [ \$? -eq 1 ]")
+    cmds+=("pvresize ${pv}")
+    cmds+=("pvs -o pv_name,vg_name,pv_size,pv_free ${pv}")
+
+    run_cmds "${cmds[@]}" || return 0
+
+    if is_k8s; then
+        msg_box "Klaar. De extra ruimte is vrij in VG ${vg:-?}.\n\nTopoLVM ziet die vanzelf (capaciteit per node wordt periodiek\nbijgewerkt). Een bestaande PVC vergroot je via de PVC zelf\n(spec.resources.requests.storage), niet hier."
+    else
+        msg_box "Klaar. De extra ruimte is vrij in VG ${vg:-?}.\nGebruik 'Logical Volume uitbreiden' om een LV (en filesystem) te laten meegroeien."
+    fi
+}
+
+# ---------------------------------------------------------------------------
+# k8s-modus: disk klaarzetten voor TopoLVM (alleen PV + VG)
+# ---------------------------------------------------------------------------
+# Toont de Helm-values voor TopoLVM (lvmd.deviceClasses) voor een VG.
+show_topolvm_snippet() {
+    local vg="$1"
+    text_view "TopoLVM-config voor ${vg}" "Helm-values voor TopoLVM (lvmd) om VG ${vg} te gebruiken:
+
+lvmd:
+  deviceClasses:
+    - name: ssd
+      volume-group: ${vg}
+      default: true
+      spare-gb: 10
+
+Let op:
+  * Een deviceClass verwijst op ELKE node naar dezelfde VG-naam.
+    Maak de VG dus op iedere node met precies deze naam.
+  * StorageClass: provisioner topolvm.io, parameter
+    topolvm.io/device-class: ssd
+  * Meer ruimte later: disk vergroten + 'PV laten meegroeien',
+    of een extra disk toevoegen aan ${vg}."
+}
+
+action_topolvm_config() {
+    local vg
+    vg=$(select_vg "Voor welke Volume Group wil je de TopoLVM-config zien?") || return 0
+    [[ -z "$vg" ]] && return 0
+    show_topolvm_snippet "$vg"
+}
+
+action_topolvm_wizard() {
+    msg_box "WIZARD - disk klaarzetten voor TopoLVM (node: $(hostname))\n\n\
+TopoLVM heeft alleen een Volume Group nodig: het maakt zelf per\n\
+PVC een Logical Volume aan, formatteert en mount het.\n\n\
+ 1) Nieuwe VG: hele disk -> PV -> nieuwe VG\n\
+ 2) Bestaande VG vergroten met deze disk (vgextend)\n\n\
+Geen partitie, geen filesystem, geen fstab.\n\
+Talos-systeemdisks en disks in gebruik zijn beschermd."
+
+    local disk
+    disk=$(select_disk "Kies de disk voor TopoLVM\n('LEEG - nieuw' = veilige, lege disk):") || return 0
+    [[ -z "$disk" ]] && return 0
+    guard_system_disk "$disk" || return 0
+
+    local status; status="$(disk_status "$disk")"
+    if [[ "$status" != LEEG* ]]; then
+        if ! confirm_box "LET OP: ${disk} is niet leeg.\nStatus: ${status}\n\nDe HELE disk wordt gewist als je doorgaat.\nDoorgaan?"; then
+            msg_box "Geannuleerd. Er is niets gewijzigd."
+            return 0
+        fi
+    fi
+
+    local mode
+    mode=$(render_menu "Wat wil je met ${disk} doen?" \
+        "nieuw" "Nieuwe Volume Group aanmaken" \
+        "uitbreiden" "Toevoegen aan bestaande Volume Group (vgextend)") || return 0
+
+    local vg action
+    if [[ "$mode" == "uitbreiden" ]]; then
+        if ! vgs --noheadings -o vg_name 2>/dev/null | grep -q .; then
+            msg_box "Er zijn nog geen Volume Groups om aan toe te voegen.\nKies 'Nieuwe Volume Group aanmaken'."
+            return 0
+        fi
+        vg=$(select_vg "Kies de Volume Group om ${disk} aan toe te voegen:") || return 0
+        [[ -z "$vg" ]] && return 0
+        action="vgextend ${vg} ${disk}"
+    else
+        vg=$(input_box "Naam van de Volume Group.\nDit wordt 'volume-group' in de TopoLVM-config en moet op elke node gelijk zijn:" "vg_topolvm") || return 0
+        [[ -z "$vg" ]] && { msg_box "Geen naam opgegeven."; return 0; }
+        valid_lvm_name "$vg" || { msg_box "Ongeldige naam '${vg}'.\nGebruik letters, cijfers en _ . + - (niet beginnend met -)."; return 0; }
+        if vgs "$vg" >/dev/null 2>&1; then
+            msg_box "Volume Group ${vg} bestaat al.\nKies 'Toevoegen aan bestaande Volume Group' of een andere naam."
+            return 0
+        fi
+        action="vgcreate ${vg} ${disk}"
+    fi
+
+    if ! dialog --backtitle "$BACKTITLE" --colors --title "$APP_TITLE" --defaultno --yes-label "Ja, uitvoeren" --no-label "Annuleren" --yesno \
+"Samenvatting (node $(hostname)):\n\n\
+  Disk         : ${disk}   (wordt VOLLEDIG gewist)\n\
+  PV           : ${disk}   (hele disk, geen partitie)\n\
+  Volume Group : ${vg}   ($( [[ "$mode" == "uitbreiden" ]] && echo "uitbreiden" || echo "nieuw" ))\n\n\
+Commando's:\n\
+  wipefs -a ${disk}\n\
+  pvcreate -y ${disk}\n\
+  ${action}\n\n\
+Wil je dit uitvoeren?" "$DLG_H" "$DLG_W"; then
+        msg_box "Geannuleerd. Er is niets gewijzigd."
+        return 0
+    fi
+
+    # Hele disk als PV: later groeien is dan alleen rescan + pvresize.
+    exec_cmds "wipefs -a ${disk}" "pvcreate -y ${disk}" "$action" || return 0
+
+    if [[ "$mode" == "uitbreiden" ]]; then
+        msg_box "Klaar! ${vg} is uitgebreid met ${disk}.\nTopoLVM ziet de extra ruimte vanzelf."
+    else
+        show_topolvm_snippet "$vg"
+    fi
+}
+
+# ---------------------------------------------------------------------------
 # Feature: formatteren + mounten (met fstab op UUID)
 # ---------------------------------------------------------------------------
 action_format_mount() {
@@ -644,7 +915,13 @@ action_format_mount() {
 action_show_layout() {
     local out=""
     out+="=== DISKS & PARTITIES (lsblk) ===\n"
-    out+="$(lsblk -o NAME,SIZE,TYPE,FSTYPE,MOUNTPOINT 2>&1)\n\n"
+    if is_k8s; then
+        # Mountpoints zijn in een pod die van de container, niet van de node.
+        out+="$(lsblk -o NAME,SIZE,TYPE,FSTYPE,PARTLABEL 2>&1)\n\n"
+        out+="Beschermd (systeem/in gebruik): ${PROTECTED_DISKS[*]:-geen}\n\n"
+    else
+        out+="$(lsblk -o NAME,SIZE,TYPE,FSTYPE,MOUNTPOINT 2>&1)\n\n"
+    fi
     out+="=== PHYSICAL VOLUMES (pvs) ===\n"
     out+="$(pvs -o pv_name,vg_name,pv_size,pv_free 2>&1 || echo 'geen')\n\n"
     out+="=== VOLUME GROUPS (vgs) ===\n"
@@ -659,11 +936,13 @@ action_show_layout() {
 # ---------------------------------------------------------------------------
 action_remove_menu() {
     local choice
-    choice=$(render_menu "Wat wil je verwijderen?" \
-        "lv" "Logical Volume verwijderen" \
-        "vg" "Volume Group verwijderen" \
-        "pv" "Physical Volume-signatuur verwijderen" \
-        "back" "Terug") || return 0
+    local -a items=()
+    # In k8s-modus zijn LV's van TopoLVM (PVC's): die ruim je op via Kubernetes.
+    is_k8s || items+=("lv" "Logical Volume verwijderen")
+    items+=("vg" "Volume Group verwijderen (alleen als leeg)"
+            "pv" "Physical Volume-signatuur verwijderen"
+            "back" "Terug")
+    choice=$(render_menu "Wat wil je verwijderen?" "${items[@]}") || return 0
 
     case "$choice" in
         lv) remove_lv ;;
@@ -702,7 +981,15 @@ remove_vg() {
     vg=$(select_vg "Kies de Volume Group om te VERWIJDEREN:") || return 0
     [[ -z "$vg" ]] && return 0
 
-    if ! confirm_box "DEFINITIEF: verwijder Volume Group ${vg}?\nDit kan alleen als er geen actieve LV's meer in zitten."; then
+    # vgremove -y zou alle LV's meenemen; in een TopoLVM-VG zijn dat PVC's.
+    local nlv
+    nlv=$(vgs --noheadings -o lv_count "$vg" 2>/dev/null | tr -d ' ' || true)
+    if [[ "${nlv:-0}" != "0" ]]; then
+        msg_box "GEWEIGERD: ${vg} bevat nog ${nlv} Logical Volume(s).\nVerwijder die eerst$(is_k8s && echo ' (bij TopoLVM: de bijbehorende PVC'"'"'s)')."
+        return 0
+    fi
+
+    if ! confirm_box "DEFINITIEF: verwijder Volume Group ${vg}?\nDe VG is leeg (geen Logical Volumes)."; then
         return 0
     fi
     run_cmds "vgremove -y ${vg}"
@@ -882,7 +1169,42 @@ Wil je dit uitvoeren?" "$DLG_H" "$DLG_W"; then
 # ---------------------------------------------------------------------------
 # Hoofdmenu
 # ---------------------------------------------------------------------------
+# Hoofdmenu in k8s-modus: alleen wat TopoLVM nodig heeft (PV/VG), geen LV/fs/fstab.
+main_menu_k8s() {
+    while true; do
+        local choice
+        choice=$(render_menu "Node: $(hostname) | k8s-modus (TopoLVM) | Kies een actie" \
+            "1" "Disk klaarzetten voor TopoLVM (WIZARD, aanbevolen)" \
+            "2" "Layout tonen (disks, PV/VG/LV)" \
+            "3" "Disk vergroot? PV laten meegroeien (pvresize)" \
+            "4" "TopoLVM-config tonen voor een Volume Group" \
+            "5" "Geavanceerd: Physical Volume aanmaken (pvcreate)" \
+            "6" "Geavanceerd: Volume Group aanmaken (vgcreate)" \
+            "7" "Geavanceerd: Volume Group uitbreiden (vgextend)" \
+            "0" "Verwijderen (VG / PV)" \
+            "q" "Afsluiten") || break
+
+        case "$choice" in
+            1) action_topolvm_wizard ;;
+            2) action_show_layout ;;
+            3) action_grow_pv ;;
+            4) action_topolvm_config ;;
+            5) action_create_pv ;;
+            6) action_create_vg ;;
+            7) action_extend_vg ;;
+            0) action_remove_menu ;;
+            *) break ;;
+        esac
+    done
+    clear
+    echo "dmtui afgesloten."
+}
+
 main_menu() {
+    if is_k8s; then
+        main_menu_k8s
+        return
+    fi
     while true; do
         local choice
         choice=$(render_menu "Distro: ${DISTRO_ID} | Kies een actie (optie 1 = nieuwe disk)" \
@@ -895,6 +1217,7 @@ main_menu() {
             "7" "Geavanceerd: Volume Group uitbreiden (vgextend)" \
             "8" "Geavanceerd: Logical Volume uitbreiden (lvextend)" \
             "9" "Geavanceerd: Formatteren + mounten (mkfs + fstab)" \
+            "g" "Disk vergroot? PV laten meegroeien (pvresize)" \
             "0" "Verwijderen (LV / VG / PV)" \
             "q" "Afsluiten") || break
 
@@ -908,6 +1231,7 @@ main_menu() {
             7) action_extend_vg ;;
             8) action_extend_lv ;;
             9) action_format_mount ;;
+            g) action_grow_pv ;;
             0) action_remove_menu ;;
             q) break ;;
             *) break ;;
@@ -935,8 +1259,17 @@ Opties:
   -h, --help      Toon deze hulp.
   -v, --version   Toon de versie.
 
-Voorbeeld:
+Omgevingsvariabelen:
+  DMTUI_MODE=host|k8s|auto   Modus (standaard auto). k8s = als privileged pod
+                             op een Kubernetes-node (bijv. Talos): alleen PV/VG
+                             voor TopoLVM, geen LV's, filesystems of fstab.
+  DMTUI_NO_FZF=1             fzf niet gebruiken.
+  DMTUI_DEBUG=1              Debug-uitvoer.
+
+Voorbeelden:
   sudo dmtui
+  kubectl debug node/<node> -n kube-system -it --profile=sysadmin \\
+    --image=ghcr.io/aalhabeeb/dmtui:latest
 EOF
 }
 
@@ -949,12 +1282,13 @@ main() {
     esac
 
     require_root
+    detect_mode
     detect_distro
     ensure_deps
     ensure_fzf_optional
     setup_dialog_theme
     compute_dialog_size
-    detect_root_disk
+    detect_protected_disks
     main_menu
 }
 
